@@ -2,6 +2,7 @@ from signal import raise_signal
 from model.frame_input import Regular2DFrameInput
 from model.section_model import BasicSectionCollectionInput
 from src.element import BasicElement, BasicElementCollection
+from src.element import BasicSection
 
 from model.global_constants import NODES_KJ_VALUES
 
@@ -20,6 +21,8 @@ class Regular2DFrame:
 
         # Data model of sections
         self._sections = sections
+        self.beam_sections = [BasicSection(section) for section in sections.beams]
+        self.column_sections = [BasicSection(section) for section in sections.columns]
 
         # Graph representation
         self._nodes_count = len(frame_input.loads)
@@ -246,7 +249,7 @@ class Regular2DFrame:
             beam_tag = self._data.beams[floor][0]
             return {
                 'tag': self._data.columns[floor][0],
-                'lenght': H_storey - self._sections.beams[beam_tag].h
+                'lenght': round((H_storey - self._sections.beams[beam_tag].h), ndigits=2)
             }
         
         elif vertical == self.spans:
@@ -254,14 +257,14 @@ class Regular2DFrame:
             beam_tag = self._data.beams[floor][-1]
             return {
                 'tag': self._data.columns[floor][-1],
-                'lenght': H_storey - self._sections.beams[beam_tag].h
+                'lenght': round((H_storey - self._sections.beams[beam_tag].h), ndigits=2)
             }
         else:
             beam_tag_1 = self._data.beams[floor][vertical]
             beam_tag_2 = self._data.beams[floor][vertical - 1]
             return {
                 'tag': self._data.columns[floor][vertical],
-                'lenght': H_storey - max(self._sections.beams[beam_tag_1].h, self._sections.beams[beam_tag_2].h)
+                'lenght': round((H_storey - max(self._sections.beams[beam_tag_1].h, self._sections.beams[beam_tag_2].h)), ndigits=2)
             }
 
 
@@ -271,34 +274,34 @@ class Regular2DFrame:
         column_tag_2 = self._data.columns[floor][span + 1]
         return{
             'tag': self._data.beams[floor][span],
-            'lenght': L_span - 0.5 * (self._sections.columns[column_tag_1].h + self._sections.columns[column_tag_2].h)
+            'lenght': round((L_span - 0.5 * (self._sections.columns[column_tag_1].h + self._sections.columns[column_tag_2].h)), ndigits=2)
         }
     
 
     def _add_element(self, node1: int, node2: int, element: BasicElement) -> None:
-        """ Adds a element column to frame """
+        """ Adds a element column to frame. """
         self._adj_list[node1].add((node2, element))
         self._adj_list[node2].add((node1, element))
 
 
     def _popolate(self) -> None:
-        """ Defines the graph structure starting from the frame data"""
+        """ Defines the graph structure starting from the frame data. """
         n_columns = len(self._data.L)
 
         def __add_storey_columns(floor: int) -> None:
-            """ Adds all the columns of a given floor """
+            """ Adds all the columns of a given floor. """
             for vertical in range(n_columns):
                 node = vertical + (floor * n_columns)
                 column_data = self._column_lenght(floor, vertical)
-                section = self.elements.add_column_section(self._sections.columns[column_data['tag']], column_data['lenght'])
+                section = self.elements.add_column_section(self.column_sections[column_data['tag']], column_data['lenght'])
                 self._add_element(node, node + n_columns, section)
         
         def __add_storey_beams(floor: int) -> None:
-            """ Adds all the beams of a given floor """
+            """ Adds all the beams of a given floor. """
             for span in range(n_columns - 1):
                 node = span + ((floor + 1) * n_columns)
                 beam_data = self._beam_lenght(floor, span)
-                section = self.elements.add_beam_section(self._sections.beams[beam_data['tag']], beam_data['lenght'])
+                section = self.elements.add_beam_section(self.beam_sections[beam_data['tag']], beam_data['lenght'])
                 self._add_element(node, node + 1, section)
         
         for floor, _ in enumerate(self._data.H):

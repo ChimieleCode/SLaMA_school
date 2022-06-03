@@ -5,49 +5,49 @@ class BasicSection:
 
     def __init__(self, section_data: BasicSectionInput):
         """ Defines an object that contains section data """
-        self._section_data = section_data
+        self._section_data_input = section_data
 
     @property
     def h(self):
-        return self._section_data.h
+        return self._section_data_input.h
     
     @property
     def b(self):
-        return self._section_data.b
+        return self._section_data_input.b
     
     @property
     def As(self):
-        return self._section_data.As
+        return self._section_data_input.As
     
     @property
     def As1(self):
-        return self._section_data.As1
+        return self._section_data_input.As1
     
     @property
     def cover(self):
-        return self._section_data.cover
+        return self._section_data_input.cover
 
     @property
     def eq_bar_diameter(self):
-        return self._section_data.eq_bar_diameter
+        return self._section_data_input.eq_bar_diameter
     
     @property
     def Ast(self):
-        return self._section_data.Ast
+        return self._section_data_input.Ast
     
     @property
     def s(self):
-        return self._section_data.s
+        return self._section_data_input.s
     
     @property
     def id(self):
-        return self._section_data.id
+        return self._section_data_input.id
     
     @property
     def d(self):
-        return self._section_data.h - self._section_data.cover
+        return self._section_data_input.h - self._section_data_input.cover
     
     @property
     def section_data(self):
-        return self._section_data
+        return self._section_data_input
 
