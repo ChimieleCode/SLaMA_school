@@ -14,8 +14,8 @@ class Regular2DFrame:
     elements = BasicElementCollection()
 
     def __init__(self, frame_input: Regular2DFrameInput, sections: BasicSectionCollectionInput):
-        """ Defines an object containing the section data, the frame data 
-        and the graph representation of the structural model """
+        """Defines an object containing the section data, the frame data 
+        and the graph representation of the structural model."""
         # Data model of frame
         self._data = frame_input
 
@@ -79,11 +79,11 @@ class Regular2DFrame:
 
     # Methods
     def does_node_exist(self, node: int) -> bool:
-        """Checks if the graph contains given node"""
+        """Checks if the graph contains given node."""
         return node in self._nodes
 
     def get_node_elements(self, node: int) -> list:
-        """Returns the elements connected to specified node [(node-i, node-j, element), ...] """
+        """Returns the elements connected to specified node [(node-i, node-j, element), ...]."""
         if not(self.does_node_exist(node)):
             raise IndexError('Given node does not exist')
         elements = list()
@@ -93,7 +93,7 @@ class Regular2DFrame:
 
 
     def get_node_id(self, floor: int, vertical: int) -> int:
-        """ Returns the node id given floor and vertical """
+        """Returns the node id given floor and vertical."""
         if floor > self.floors or floor < 0:
             raise IndexError('Specified span does not exist')
         if vertical > self.spans or vertical < 0:
@@ -102,21 +102,21 @@ class Regular2DFrame:
 
 
     def get_node_floor(self, node: int) -> int:
-        """ Returns the node floor location given the node id """
+        """Returns the node floor location given the node id."""
         if not(self.does_node_exist):
             raise IndexError('Given node does not exist')
         return int(node / self.verticals)
     
 
     def get_node_vertical(self, node: int) -> int:
-        """ Returns the node vertical location given the node id """
+        """Returns the node vertical location given the node id."""
         if not(self.does_node_exist):
             raise IndexError('Given node does not exist')
         return node % self.verticals
 
 
     def get_node_position(self, node: int) -> dict:
-        """ Returns the node location {'vertical' : ..., 'floor' : ...} given the id """
+        """Returns the node location {'vertical' : ..., 'floor' : ...} given the id."""
         if not(self.does_node_exist):
             raise IndexError('Given node does not exist')
         return {
@@ -126,7 +126,7 @@ class Regular2DFrame:
 
 
     def get_node_coordinates(self, node: int) -> dict:
-        """ Returns the node coordinates {'X' : ..., 'Z' : ...} given the id """
+        """Returns the node coordinates {'X' : ..., 'Z' : ...} given the id."""
         if not(self.does_node_exist):
             raise IndexError('Given node does not exist')
         position = self.get_node_position(node)
@@ -137,14 +137,14 @@ class Regular2DFrame:
 
 
     def get_node_load(self, node: int) -> float:
-        """ Get the load on a given node """
+        """Get the load on a given node."""
         if not(self.does_node_exist):
             raise IndexError('Given node does not exist')
         return self.loads[node]
     
 
     def get_interstorey_height(self, floor: int) -> float:
-        """ Returns the interstorey height of given storey """
+        """Returns the interstorey height of given storey."""
         if floor > self.floors or floor < 0:
             raise IndexError('Specified span does not exist')
         if floor == 0:
@@ -154,7 +154,7 @@ class Regular2DFrame:
     
 
     def get_span_length(self, span: int) -> float:
-        """ Returns the span lenght given the span number starting from 0"""
+        """Returns the span lenght given the span number starting from 0."""
         if span >= self.spans or span < 0:
             raise IndexError('Specified span does not exist')
         else:
@@ -162,7 +162,7 @@ class Regular2DFrame:
 
 
     def get_delta_axial(self, node: int) -> float:
-        """ Returns the deltaN value normalized for a column moment of 1 kNm given the id of node"""
+        """Returns the deltaN value normalized for a column moment of 1 kNm given the id of node."""
         # Determines the influence lenght and sign of Delta_N
         if self.get_node_vertical(node) == 0:
             influence_length = self.span_lengths[0] / 2
@@ -190,7 +190,7 @@ class Regular2DFrame:
 
 
     def get_subassembly(self, node: int) -> dict:
-        """ Returns the subassemply data as dict """
+        """Returns the subassemply data as dict."""
         floor = self.get_node_floor(node)
         vertical = self.get_node_vertical(node)
         subassembly = dict()
@@ -238,7 +238,7 @@ class Regular2DFrame:
 
     # Private Methods
     def _column_lenght(self, floor: int, vertical: int) -> dict:
-        """ Computes the shear lenghts of specified element"""
+        """Computes the shear lenghts of specified element."""
         if floor == 0:
             H_storey = self._data.H[0]
         else:
@@ -279,17 +279,17 @@ class Regular2DFrame:
     
 
     def _add_element(self, node1: int, node2: int, element: BasicElement) -> None:
-        """ Adds a element column to frame. """
+        """Adds a element column to frame."""
         self._adj_list[node1].add((node2, element))
         self._adj_list[node2].add((node1, element))
 
 
     def _popolate(self) -> None:
-        """ Defines the graph structure starting from the frame data. """
+        """Defines the graph structure starting from the frame data."""
         n_columns = len(self._data.L)
 
         def __add_storey_columns(floor: int) -> None:
-            """ Adds all the columns of a given floor. """
+            """Adds all the columns of a given floor."""
             for vertical in range(n_columns):
                 node = vertical + (floor * n_columns)
                 column_data = self._column_lenght(floor, vertical)
@@ -297,7 +297,7 @@ class Regular2DFrame:
                 self._add_element(node, node + n_columns, section)
         
         def __add_storey_beams(floor: int) -> None:
-            """ Adds all the beams of a given floor. """
+            """Adds all the beams of a given floor."""
             for span in range(n_columns - 1):
                 node = span + ((floor + 1) * n_columns)
                 beam_data = self._beam_lenght(floor, span)

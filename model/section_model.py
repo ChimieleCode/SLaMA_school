@@ -3,8 +3,8 @@ from pydantic import BaseModel, validator
 
 class BasicSectionInput(BaseModel):
     """ Validator data model for structural frame
-
-    eq_bar_diameter is used instead of single bar diameters
+     
+    eq_bar_diameter is used instead of single bar diameters.
     """
     h               : float
     b               : float
@@ -20,6 +20,7 @@ class BasicSectionCollectionInput(BaseModel):
     columns : List[BasicSectionInput]
     beams   : List[BasicSectionInput]
 
+    # Reduce number of statements
     @validator('columns')
     def columns_check_id_match(cls, value):
         column_id_set = set()

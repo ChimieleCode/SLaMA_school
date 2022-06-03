@@ -3,15 +3,12 @@ from model.section_model import BasicSectionInput
 from src.section import BasicSection
 
 class BasicElement:
-    """ An element object contains data on the section and the lenght of an element
+    """An element object contains data on the section and the lenght of an element
     like column or beam.
     """
 
-    # If 2 floats have a lower difference will be considered as equal 
-    _TOLLERANCE = 0.001
-
     def __init__(self, section: BasicSection, L: float):
-        """ Defines an object containing the section data and
+        """Defines an object containing the section data and
         element net lenght.
         """
         self._section_data = section
@@ -66,7 +63,7 @@ class BasicElement:
         return self._section_data
 
     def match(self, section: BasicSection, L: float) -> bool:
-        """ Check if an instance match given data. """
+        """Check if an instance match given data."""
         return (self._section_data.section_data == section.section_data) and (self.L == L)
     
     def __str__(self) -> str:
@@ -84,12 +81,12 @@ class BasicElement:
         """
 
 class BasicElementCollection:
-    """ No data shall be provided to initiate an istance of this class. """
+    """No data shall be provided to initiate an istance of this class."""
     column_elements : List[BasicElement] = list()
     beam_elements : List[BasicElement] = list()
 
     def add_column_section(self, section: BasicSection, L: float) -> BasicElement:
-        """ Adds a section to the column section collection and converts it 
+        """Adds a section to the column section collection and converts it 
         into a BasicSection Object
         
         If an istance with same data is already contained in the collection, 
@@ -105,7 +102,7 @@ class BasicElementCollection:
         return new_column
 
     def add_beam_section(self, section: BasicSection, L: float) -> BasicElement:
-        """ Adds a section to the beam section collection and converts it 
+        """Adds a section to the beam section collection and converts it 
         into a BasicSection Object 
         
         If an istance with same data is already contained in the collection, 

@@ -1,7 +1,7 @@
 from src.frame import Regular2DFrame
 from src.utils import import_from_json
 from model.frame_input import Regular2DFrameInput
-from model.section_model import BasicSectionCollectionInput, BasicSectionInput
+from model.section_model import BasicSectionCollectionInput
 
 def main():
     """ Main process. """
@@ -25,7 +25,7 @@ def main():
     #initiate the class
     structural_model = Regular2DFrame(frame, sections)
 
-    print(structural_model.elements.column_elements.__len__())
+    # print(structural_model.elements.column_elements.__len__())
 
 # Don t change
 if __name__ == '__main__':
