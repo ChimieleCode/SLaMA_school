@@ -4,8 +4,7 @@ from model.frame_input import Regular2DFrameInput
 from model.section_model import BasicSectionCollectionInput
 
 def main():
-    """ Main process. """
-
+    """Main process."""
     #import frame data
     frame_dct = import_from_json('.\Inputs\Frame.json')
 
@@ -25,8 +24,15 @@ def main():
     #initiate the class
     structural_model = Regular2DFrame(frame, sections)
 
-    # print(structural_model.elements.column_elements.__len__())
 
-# Don t change
+# Profile Mode
 if __name__ == '__main__':
-    main()
+    import cProfile
+    import pstats
+
+    with cProfile.Profile() as pr:
+        main()
+
+    stats = pstats.Stats(pr)
+    stats.sort_stats(pstats.SortKey.TIME)
+    stats.print_stats()

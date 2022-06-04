@@ -3,10 +3,9 @@
 PI = 3.14159265
 G = 9.18
 NODES_KJ_VALUES = {
-    'topleft'   : 0.2,
-    'topright'  : 0.2,
-    'top'       : 0.3,
-    ''          : 0.8,
-    'left'      : 0.2,
-    'right'     : 0.2
+    'internal'      : 0.8,
+    'external'      : 0.2,
+    'top_internal'  : 0.3,
+    'top_external'  : 0.2,
+    'base'          : None
 }

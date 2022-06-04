@@ -1,21 +1,19 @@
-from signal import raise_signal
 from model.frame_input import Regular2DFrameInput
 from model.section_model import BasicSectionCollectionInput
+from model.subassembly import Subassembly
 from src.element import BasicElement, BasicElementCollection
 from src.element import BasicSection
 
 from model.global_constants import NODES_KJ_VALUES
 
 class Regular2DFrame:
-    """Regular2DFrame Class
-    : frame_input from from frame data model :
-    : sections from sections data model      :
-    """
+
     elements = BasicElementCollection()
 
     def __init__(self, frame_input: Regular2DFrameInput, sections: BasicSectionCollectionInput):
         """Defines an object containing the section data, the frame data 
-        and the graph representation of the structural model."""
+        and the graph representation of the structural model.
+        """
         # Data model of frame
         self._data = frame_input
 
@@ -26,8 +24,8 @@ class Regular2DFrame:
 
         # Graph representation
         self._nodes_count = len(frame_input.loads)
-        self._nodes = range(self._nodes_count)
-        self._adj_list = {node: set() for node in self._nodes}
+        self.nodes = range(self._nodes_count)
+        self._adj_list = {node: set() for node in self.nodes}
         self._popolate()
 
     @property
@@ -80,7 +78,7 @@ class Regular2DFrame:
     # Methods
     def does_node_exist(self, node: int) -> bool:
         """Checks if the graph contains given node."""
-        return node in self._nodes
+        return node in self.nodes
 
     def get_node_elements(self, node: int) -> list:
         """Returns the elements connected to specified node [(node-i, node-j, element), ...]."""
@@ -189,51 +187,34 @@ class Regular2DFrame:
         return delta_N / M_col
 
 
-    def get_subassembly(self, node: int) -> dict:
-        """Returns the subassemply data as dict."""
+    def get_subassembly(self, node: int) -> Subassembly:
+        """Returns the subassemply data as Subassembly dataclass."""
         floor = self.get_node_floor(node)
         vertical = self.get_node_vertical(node)
-        subassembly = dict()
-
-        # Identifies node type
-        node_type = ''
-        if floor == self.floors:
-            node_type += 'top'
-        elif floor == 0:
-            node_type += 'base'
-
-        if vertical == self.spans:
-            node_type += 'right'
-        elif vertical == 0:
-            node_type += 'left'
-
-        subassembly['type'] = node_type
-
+        subassembly = {
+            'node' : node
+        }
         # Gets subassembly elements data
         subassembly_elements = self.get_node_elements(node)
         for element in subassembly_elements:
             if element[1] == element[0] + self.verticals:
-                subassembly['upper'] = element[2]
+                subassembly['above_column'] = element[2]
                 continue
             if element[1] == element[0] - self.verticals:
-                subassembly['lower'] = element[2]
+                subassembly['below_column'] = element[2]
                 continue
             if element[1] == element[0] - 1:
-                subassembly['left'] = element[2]
+                subassembly['left_beam'] = element[2]
                 continue
             if element[1] == element[0] + 1:
-                subassembly['right'] = element[2]
+                subassembly['right_beam'] = element[2]
                 continue
 
         # Gets the axial stress acting on the node
         subassembly['axial'] = sum(self.loads[node::self.verticals])
-
         # Computes delta axial
         subassembly['delta_axial'] = self.get_delta_axial(node)
-
-        # Computes kj to be modified
-        subassembly['kj'] = NODES_KJ_VALUES.get(node_type, 0)
-        return subassembly
+        return Subassembly(**subassembly)
 
 
     # Private Methods

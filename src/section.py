@@ -1,10 +1,9 @@
 from model.section_model import BasicSectionInput
 
 class BasicSection:
-    """ A Section object contains data  on the section input model"""
 
     def __init__(self, section_data: BasicSectionInput):
-        """ Defines an object that contains section data """
+        """Defines an object that contains section data """
         self._section_data_input = section_data
 
     @property
