@@ -6,3 +6,7 @@ class NodeType(str, Enum):
     TopInternal = 'top_internal'
     TopExternal = 'top_external'
     Base        = 'base'
+
+class Direction(int, Enum):
+    Positive    = 1
+    negative    = -1
