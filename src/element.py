@@ -1,4 +1,5 @@
 from typing import List
+from functools import cache
 from model.section_model import BasicSectionInput
 from src.section import BasicSection
 
@@ -85,9 +86,9 @@ class BasicElementCollection:
     column_elements : List[BasicElement] = list()
     beam_elements : List[BasicElement] = list()
 
+    @cache
     def add_column_section(self, section: BasicSection, L: float) -> BasicElement:
-        """Adds a section to the column section collection and converts it 
-        into a BasicSection Object
+        """Adds an element to the column element collection starting from a Section
         
         If an istance with same data is already contained in the collection, 
         it will return the existing instance inside the collection. 
@@ -101,9 +102,9 @@ class BasicElementCollection:
         self.column_elements.append(new_column)
         return new_column
 
+    @cache
     def add_beam_section(self, section: BasicSection, L: float) -> BasicElement:
-        """Adds a section to the beam section collection and converts it 
-        into a BasicSection Object 
+        """Adds an element to the beam element collection starting from a Section
         
         If an istance with same data is already contained in the collection, 
         it will return the existing instance inside the collection. 
