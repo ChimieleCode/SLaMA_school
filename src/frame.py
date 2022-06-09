@@ -18,7 +18,6 @@ class Regular2DFrame:
         self._data = frame_input
 
         # Data model of sections
-        self._sections = sections
         self.beam_sections = [BasicSection(section) for section in sections.beams]
         self.column_sections = [BasicSection(section) for section in sections.columns]
 
@@ -189,8 +188,6 @@ class Regular2DFrame:
 
     def get_subassembly(self, node: int) -> Subassembly:
         """Returns the subassemply data as Subassembly dataclass."""
-        floor = self.get_node_floor(node)
-        vertical = self.get_node_vertical(node)
         subassembly = {
             'node' : node
         }
@@ -230,7 +227,7 @@ class Regular2DFrame:
             beam_tag = self._data.beams[floor][0]
             return {
                 'tag': self._data.columns[floor][0],
-                'lenght': round((H_storey - self._sections.beams[beam_tag].h), ndigits=2)
+                'lenght': round((H_storey - self.beam_sections[beam_tag].h), ndigits=2)
             }
         
         elif vertical == self.spans:
@@ -238,14 +235,14 @@ class Regular2DFrame:
             beam_tag = self._data.beams[floor][-1]
             return {
                 'tag': self._data.columns[floor][-1],
-                'lenght': round((H_storey - self._sections.beams[beam_tag].h), ndigits=2)
+                'lenght': round((H_storey - self.beam_sections[beam_tag].h), ndigits=2)
             }
         else:
             beam_tag_1 = self._data.beams[floor][vertical]
             beam_tag_2 = self._data.beams[floor][vertical - 1]
             return {
                 'tag': self._data.columns[floor][vertical],
-                'lenght': round((H_storey - max(self._sections.beams[beam_tag_1].h, self._sections.beams[beam_tag_2].h)), ndigits=2)
+                'lenght': round((H_storey - max(self.beam_sections[beam_tag_1].h, self.beam_sections[beam_tag_2].h)), ndigits=2)
             }
 
 
@@ -255,7 +252,7 @@ class Regular2DFrame:
         column_tag_2 = self._data.columns[floor][span + 1]
         return{
             'tag': self._data.beams[floor][span],
-            'lenght': round((L_span - 0.5 * (self._sections.columns[column_tag_1].h + self._sections.columns[column_tag_2].h)), ndigits=2)
+            'lenght': round((L_span - 0.5 * (self.column_sections[column_tag_1].h + self.column_sections[column_tag_2].h)), ndigits=2)
         }
     
 
