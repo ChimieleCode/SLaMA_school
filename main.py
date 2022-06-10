@@ -13,6 +13,7 @@ from src.elements.basic_element import BasicElement
 from src.subassembly import SubassemblyFactory
 from src.collections.subassembly_collection import SubassemblyCollection
 
+
 def main():
     """Main process."""
     # Import frame data
