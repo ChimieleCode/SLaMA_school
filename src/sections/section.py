@@ -6,12 +6,12 @@ class Section(ABC):
     """Abstract method for section"""
     # add return type
     @abstractmethod
-    def moment_curvature(self, direcion: Direction, axial: float=0.):
+    def moment_curvature(self, direction: Direction, axial: float=0.):
         pass
 
     # add return type
     @abstractmethod
-    def domain_MN(self):
+    def domain_MN(self, axial: float) -> float:
         pass
 
     # add return type
@@ -25,4 +25,12 @@ class Section(ABC):
 
     @abstractmethod
     def get_section_data(self):
+        pass
+
+    @abstractmethod
+    def get_concrete(self):
+        pass
+
+    @abstractmethod
+    def get_steel(self):
         pass

@@ -1,4 +1,3 @@
-
 from src.utils import import_from_json
 
 from model.validation.frame_input import Regular2DFrameInput
@@ -40,7 +39,7 @@ def main():
     steel = Steel(**validated_materials.steel.__dict__)
     concrete = Concrete(**validated_materials.concrete.__dict__)
 
-    # Instanciate Section Data
+    # Instanciate Section Data and visitors
     sections = SectionCollection()
     sections.reset()
 
@@ -57,7 +56,7 @@ def main():
             section_data=validated_section, 
             concrete=concrete, 
             steel=steel
-            )
+        )
         sections.add_column_section(section)
     
     # Build frame model

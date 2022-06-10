@@ -17,7 +17,7 @@ class Element(ABC):
 
     # add return type
     @abstractmethod
-    def shear_moment_interaction(self, axial: float=0.):
+    def shear_moment_interaction(self, axial: float=0.) -> None:
         pass
 
     @abstractmethod

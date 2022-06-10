@@ -16,6 +16,8 @@ class ElementCollection:
         
         If an istance with same data is already contained in the collection, 
         it will return the existing instance inside the collection. 
+
+        For better performance wrap the L input param in a round(L, ndigits=2).
         """
         for column in self.__column_elements:
             # Checks if there is already a element with same proprieties
@@ -32,6 +34,8 @@ class ElementCollection:
         
         If an istance with same data is already contained in the collection, 
         it will return the existing instance inside the collection. 
+
+        For better performance wrap the L input param in a round(L, ndigits=2).
         """
         for beam in self.__beam_elements:
             # Checks if there is already a element with same proprieties

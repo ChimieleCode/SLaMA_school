@@ -85,14 +85,12 @@ class RegularFrame(Graph):
         else:
             return self.__heights[floor] - self.__heights[floor - 1]
     
-
     def get_span_length(self, span: int) -> float:
         """Returns the span lenght given the span number starting from 0."""
         if span >= self.spans or span < 0:
             raise NodeNotFoundError('Specified span does not exist')
         else:
             return self.__lenghts[span + 1] - self.__lenghts[span]
-
 
     def get_delta_axial(self, node: int) -> float:
         """Returns the deltaN value normalized for a column moment of 1 kNm given the id of node."""
@@ -173,7 +171,7 @@ class RegularFrameBuilder:
                 column_data = self.__column_lenght(floor, vertical)
                 element = self.__elements.add_column_element(
                     section=self.__sections.get_columns()[column_data['tag']], 
-                    L=column_data['lenght'],
+                    L=round(column_data['lenght'], ndigits=2),
                     _elementClass=self.__element_object      
                 )
                 self.__add_element(node, node + self.__frame.verticals, element)
@@ -185,7 +183,7 @@ class RegularFrameBuilder:
                 beam_data = self.__beam_lenght(floor, span)
                 element = self.__elements.add_beam_element(
                     section=self.__sections.get_beams()[beam_data['tag']], 
-                    L=beam_data['lenght'],
+                    L=round(beam_data['lenght'], ndigits=2),
                     _elementClass=self.__element_object
                 )
                 self.__add_element(node, node + 1, element)
@@ -208,21 +206,21 @@ class RegularFrameBuilder:
             beam_tag = self.__frame_data.beams[floor][0]
             return {
                 'tag': self.__frame_data.columns[floor][0],
-                'lenght': round((H_storey - self.__sections.get_beams()[beam_tag].get_height()), ndigits=2)
+                'lenght': (H_storey - self.__sections.get_beams()[beam_tag].get_height())
             }
         elif vertical == self.__frame.spans:
             # Gets the tag of the last beam section connected on top
             beam_tag = self.__frame_data.beams[floor][-1]
             return {
                 'tag': self.__frame_data.columns[floor][-1],
-                'lenght': round((H_storey - self.__sections.get_beams()[beam_tag].get_height()), ndigits=2)
+                'lenght': (H_storey - self.__sections.get_beams()[beam_tag].get_height())
             }
         else:
             beam_tag_1 = self.__frame_data.beams[floor][vertical]
             beam_tag_2 = self.__frame_data.beams[floor][vertical - 1]
             return {
                 'tag': self.__frame_data.columns[floor][vertical],
-                'lenght': round((H_storey - max(self.__sections.get_beams()[beam_tag_1].get_height(), self.__sections.get_beams()[beam_tag_2].get_height())), ndigits=2)
+                'lenght': (H_storey - max(self.__sections.get_beams()[beam_tag_1].get_height(), self.__sections.get_beams()[beam_tag_2].get_height()))
             }
 
         
@@ -232,7 +230,7 @@ class RegularFrameBuilder:
         column_tag_2 = self.__frame_data.columns[floor][span + 1]
         return{
             'tag': self.__frame_data.beams[floor][span],
-            'lenght': round((L_span - 0.5 * (self.__sections.get_columns()[column_tag_1].get_height() + self.__sections.get_columns()[column_tag_2].get_height())), ndigits=2)
+            'lenght': (L_span - 0.5 * (self.__sections.get_columns()[column_tag_1].get_height() + self.__sections.get_columns()[column_tag_2].get_height()))
         }
     
     def __add_element(self, node1: int, node2: int, element: Element) -> None:

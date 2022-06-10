@@ -13,11 +13,11 @@ class BasicElement(Element):
         element net lenght.
         """
         self.__section = section
-        self.__L = L
-
+        self.__L = round(L, ndigits=2)
+    
     def match(self, section: Section, L: float) -> bool:
         """Check if an instance match given data."""
-        return (self.__section.get_section_data() == section.get_section_data()) and (self.__L == L)
+        return (self.__section.get_section_data() == section.get_section_data()) and (self.__L == round(L, ndigits=2))
 
     def moment_rotation(self, direction: Direction, axial: float=0.):
         print('not implemented yet')
