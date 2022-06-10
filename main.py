@@ -13,7 +13,6 @@ from src.elements.basic_element import BasicElement
 from src.subassembly import SubassemblyFactory
 from src.collections.subassembly_collection import SubassemblyCollection
 
-
 def main():
     """Main process."""
     # Import frame data
@@ -69,8 +68,6 @@ def main():
     )
     frame_builder.build_frame()
     frame = frame_builder.get_frame()
-
-    print(frame_builder.get_elements())
 
     # Get subassemblies
     subassemly_factory = SubassemblyFactory(frame=frame)
