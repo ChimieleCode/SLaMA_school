@@ -8,7 +8,7 @@ class BasicElement(Element):
     like column or beam.
     """
 
-    def __init__(self, section: Section, L: float):
+    def __init__(self, section: Section, L: float) -> None:
         """Defines an object containing the section data and
         element net lenght.
         """
@@ -24,3 +24,7 @@ class BasicElement(Element):
 
     def shear_moment_interaction(self, axial: float=0.):
         print('not implemented yet')
+
+    def __str__(self) -> str:
+        return self.__section.__str__() + f"L               : {self.__L}\n"
+

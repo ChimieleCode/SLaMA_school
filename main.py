@@ -69,6 +69,8 @@ def main():
     frame_builder.build_frame()
     frame = frame_builder.get_frame()
 
+    print(frame_builder.get_elements())
+
     # Get subassemblies
     subassemly_factory = SubassemblyFactory(frame=frame)
     subassemblies = SubassemblyCollection()
@@ -89,4 +91,4 @@ if __name__ == '__main__':
 
     stats = pstats.Stats(pr)
     stats.sort_stats(pstats.SortKey.TIME)
-    stats.print_stats()
+    # stats.print_stats()

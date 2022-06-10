@@ -160,6 +160,10 @@ class RegularFrameBuilder:
         """Returns the built frame."""
         return self.__frame
 
+    def get_elements(self) -> ElementCollection:
+        """Get element collection."""
+        return self.__elements
+
     def build_frame(self):
         """Defines the graph structure starting from the frame data."""
         def __add_storey_columns(floor: int) -> None:
@@ -180,7 +184,7 @@ class RegularFrameBuilder:
                 node = span + ((floor + 1) * self.__frame.verticals)
                 beam_data = self.__beam_lenght(floor, span)
                 element = self.__elements.add_beam_element(
-                    section=self.__sections.get_columns()[beam_data['tag']], 
+                    section=self.__sections.get_beams()[beam_data['tag']], 
                     L=beam_data['lenght'],
                     _elementClass=self.__element_object
                 )

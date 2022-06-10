@@ -18,10 +18,10 @@ class ElementCollection:
         it will return the existing instance inside the collection. 
         """
         for column in self.__column_elements:
-            # Checks if there is already a section with same proprieties
+            # Checks if there is already a element with same proprieties
             if column.match(section, L):
                 return column
-        # If no such section is defined, creates one
+        # If no such element is defined, creates one
         new_column = _elementClass(section, L)
         self.__column_elements.append(new_column)
         return new_column
@@ -34,20 +34,20 @@ class ElementCollection:
         it will return the existing instance inside the collection. 
         """
         for beam in self.__beam_elements:
-            # Checks if there is already a section with same proprieties
+            # Checks if there is already a element with same proprieties
             if beam.match(section, L):
                 return beam
-        # If no such section is defined, creates one
+        # If no such element is defined, creates one
         new_beam = _elementClass(section, L)
         self.__beam_elements.append(new_beam)
         return new_beam
 
     def get_beams(self) -> List[Element]:
-        """Returns the list of beam sections in the SectionCollection."""
+        """Returns the list of beam elements in the SectionCollection."""
         return self.__beam_elements
 
     def get_columns(self) -> List[Element]:
-        """Returns the list of column sections in the SectionCollection."""
+        """Returns the list of column elements in the SectionCollection."""
         return self.__column_elements
 
     def reset(self, beams: bool=True, columns: bool=True):
@@ -59,10 +59,10 @@ class ElementCollection:
 
     def __str__(self):
         print_ = ''
-        for section in self.__column_elements:
-            print_ += str(section)
-        for section in self.__beam_elements:
-            print_ += str(section)
+        for element in self.__column_elements:
+            print_ += str(element)
+        for element in self.__beam_elements:
+            print_ += str(element)
         return print_
         
 
