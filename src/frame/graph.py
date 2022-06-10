@@ -6,12 +6,12 @@ class NodeNotFoundError(Exception):
     """Raised when node is not found."""
     message = 'given node was not found'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
 class Graph:
 
-    def __init__(self, node_count: int):
+    def __init__(self, node_count: int) -> None:
         """Graph data structure"""
         self.__node_count = node_count
         self.__nodes = range(node_count)
@@ -26,7 +26,7 @@ class Graph:
         self.__nodes = range(self.__node_count)
         self.__adj_list[self.__node_count] = set()
 
-    def add_arch(self, i_node: int, j_node: int, weight: Element):
+    def add_arch(self, i_node: int, j_node: int, weight: Element) -> None:
         """Adds a oriented arch to the graph that points to node j starting from i."""
         self.__adj_list[i_node].add((j_node, weight))
 

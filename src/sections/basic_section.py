@@ -6,7 +6,7 @@ from src.sections.section import Section
 
 class BasicSection(Section):
 
-    def __init__(self, section_data: BasicSectionInput, concrete: Concrete, steel: Steel):
+    def __init__(self, section_data: BasicSectionInput, concrete: Concrete, steel: Steel) -> None:
         """Defines an object that contains section data"""
         self.__section_data = section_data
         self.__concrete = concrete
@@ -24,7 +24,7 @@ class BasicSection(Section):
     def get_height(self) -> float:
         return self.__section_data.h
     
-    def get_section_data(self):
+    def get_section_data(self) -> None:
         return self.__section_data
 
     def __str__(self) -> str:

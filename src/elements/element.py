@@ -7,7 +7,7 @@ class Element(ABC):
     """Abstract class for element"""
 
     @abstractmethod
-    def __init__(self, section: Section, L: float):
+    def __init__(self, section: Section, L: float) -> None:
         pass
 
     # add return type

@@ -50,14 +50,14 @@ class ElementCollection:
         """Returns the list of column elements in the SectionCollection."""
         return self.__column_elements
 
-    def reset(self, beams: bool=True, columns: bool=True):
+    def reset(self, beams: bool=True, columns: bool=True) -> None:
         """Resets the element collection."""
         if beams:
             self.__beam_elements = list()
         if columns:
             self.__column_elements = list()
 
-    def __str__(self):
+    def __str__(self) -> str:
         print_ = ''
         for element in self.__column_elements:
             print_ += str(element)

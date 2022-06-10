@@ -16,6 +16,6 @@ class Steel:
 
     @property
     @cache
-    def epsilon_y(self):
+    def epsilon_y(self) -> float:
         return self.fy / self.E
 

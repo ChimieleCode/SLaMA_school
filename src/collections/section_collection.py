@@ -6,12 +6,12 @@ class SectionCollection:
     __column_sections : List[Section] = list()
     __beam_sections : List[Section] = list()
 
-    def add_column_section(self, new_column: Section):
+    def add_column_section(self, new_column: Section) -> None:
         """Adds an section to the column section collection starting from a Section."""
         self.__column_sections.append(new_column)
         return new_column
 
-    def add_beam_section(self, new_beam: Section):
+    def add_beam_section(self, new_beam: Section) -> None:
         """Adds an section to the beam section collection starting from a Section."""
         self.__beam_sections.append(new_beam)
         return 
@@ -24,14 +24,14 @@ class SectionCollection:
         """Returns the list of column sections in the SectionCollection."""
         return self.__column_sections
 
-    def reset(self, beams: bool=True, columns: bool=True):
+    def reset(self, beams: bool=True, columns: bool=True) -> None:
         """Resets the section collection."""
         if beams:
             self.__beam_sections = list()
         if columns:
             self.__column_sections = list()
 
-    def __str__(self):
+    def __str__(self) -> str:
         print_ = ''
         for section in self.__column_sections:
             print_ += str(section)

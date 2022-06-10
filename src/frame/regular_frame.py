@@ -1,5 +1,5 @@
 from functools import cache
-from typing import List
+from typing import List, Tuple
 from model.validation.frame_input import Regular2DFrameInput
 from src.frame.graph import Graph, NodeNotFoundError
 
@@ -16,22 +16,22 @@ class RegularFrame(Graph):
     
     @property
     @cache
-    def spans(self):
+    def spans(self) -> int:
         return len(self.__lenghts) - 1
 
     @property
     @cache
-    def verticals(self):
+    def verticals(self) -> int:
         return len(self.__lenghts)
     
     @property
     @cache
-    def floors(self):
+    def floors(self) -> int:
         return len(self.__heights)
 
     @property
     @cache
-    def floor_forces_distribution(self):
+    def floor_forces_distribution(self) -> Tuple[float]:
         # See §7.3.3.2 of NTC2018
         force_height = sum(mass * height for mass, height in zip(self.__masses, self.__heights))
         return tuple((mass * height) / force_height for mass, height in zip(self.__masses, self.__heights))
@@ -146,7 +146,7 @@ from src.elements.element import Element
     
 class RegularFrameBuilder:
 
-    def __init__(self, frame_data: Regular2DFrameInput, sections: SectionCollection, element_object: type[Element]):
+    def __init__(self, frame_data: Regular2DFrameInput, sections: SectionCollection, element_object: type[Element]) -> None:
         """This is class builds a frame given the sections and the validated frame input."""
         self.__frame_data = frame_data
         self.__sections = sections
@@ -164,7 +164,7 @@ class RegularFrameBuilder:
         """Get element collection."""
         return self.__elements
 
-    def build_frame(self):
+    def build_frame(self) -> None:
         """Defines the graph structure starting from the frame data."""
         def __add_storey_columns(floor: int) -> None:
             """Adds all the columns of a given floor."""
