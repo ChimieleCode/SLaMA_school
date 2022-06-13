@@ -2,9 +2,8 @@ from typing import List
 from pydantic import BaseModel, validator
 
 class BasicSectionInput(BaseModel):
-    """Validator data model for structural frame
-     
-    eq_bar_diameter is used instead of single bar diameters.
+    """
+    Validator data model for structural frame
     """
     h               : float
     b               : float

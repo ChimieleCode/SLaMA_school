@@ -4,7 +4,9 @@ from model.enums import Direction
 from src.sections.section import Section
 
 class Element(ABC):
-    """Abstract class for element"""
+    """
+    Abstract class for element
+    """
 
     @abstractmethod
     def __init__(self, section: Section, L: float) -> None:

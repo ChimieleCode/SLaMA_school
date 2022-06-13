@@ -2,7 +2,8 @@ from pydantic import BaseModel, validator
 from typing import List
 
 class Regular2DFrameInput(BaseModel):
-    """Validator data model for structural frame
+    """
+    Validator data model for structural frame
 
     Input is validated to make sure that the defined
     frame is consistent

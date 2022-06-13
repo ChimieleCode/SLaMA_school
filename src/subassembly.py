@@ -32,7 +32,9 @@ class Subassembly:
 
     # Private methods
     def __find_nodetype(self) -> NodeType:
-        """Finds the node type using a logic Tree."""
+        """
+        Finds the node type using a logic Tree
+        """
         if self.below_column is None:
             return NodeType.Base
         elif self.above_column is None:
@@ -54,11 +56,15 @@ from src.frame.regular_frame import RegularFrame
 class SubassemblyFactory:
 
     def __init__(self, frame: RegularFrame) -> None:
-        """Subassembly Factory starting from frame data."""
+        """
+        Subassembly Factory starting from frame data
+        """
         self.__frame = frame
 
     def get_subassembly(self, node: int) -> Subassembly:
-        """Get the subassembly data given the node from the frame data."""
+        """
+        Get the subassembly data given the node from the frame data
+        """
         subassembly = {
             'node' : node
         }

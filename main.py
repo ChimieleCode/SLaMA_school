@@ -1,16 +1,14 @@
 from src.utils import import_from_json
 
-from model.validation.frame_input import Regular2DFrameInput
-from model.validation.section_model import BasicSectionCollectionInput
-from model.validation.material_validation import SimpleMaterialInput
-from src.steel.steel import Steel
-from src.concrete.concrete import Concrete
-from src.collections.section_collection import SectionCollection
-from src.sections.basic_section import BasicSection
-from src.frame.regular_frame import RegularFrameBuilder
-from src.elements.basic_element import BasicElement
+from model.validation import Regular2DFrameInput, BasicSectionCollectionInput, SimpleMaterialInput
+from src.steel.steel import Steel   # Non ho idea del perchè
+from src.concrete import Concrete
+from src.collections import SectionCollection, SubassemblyCollection
+from src.sections import BasicSection
+from src.frame import RegularFrameBuilder
+from src.elements import BasicElement
 from src.subassembly import SubassemblyFactory
-from src.collections.subassembly_collection import SubassemblyCollection
+
 
 def main():
     """Main process."""

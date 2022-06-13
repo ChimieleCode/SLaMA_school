@@ -1,6 +1,5 @@
 from typing import List
 
-from numpy import empty
 from src.elements.element import Element
 from src.sections.section import Section
 from functools import cache
@@ -17,14 +16,18 @@ class ElementCollection:
         If an istance with same data is already contained in the collection, 
         it will return the existing instance inside the collection. 
 
-        For better performance wrap the L input param in a round(L, ndigits=2).
+        :param section: section object
+        
+        :param float L: length of the element
+
+        :param _elementClass: element class that is going to be added
         """
         for column in self.__column_elements:
             # Checks if there is already a element with same proprieties
             if column.match(section, L):
                 return column
         # If no such element is defined, creates one
-        new_column = _elementClass(section, L)
+        new_column = _elementClass(section, round(L, ndigits=2))
         self.__column_elements.append(new_column)
         return new_column
 
@@ -35,27 +38,37 @@ class ElementCollection:
         If an istance with same data is already contained in the collection, 
         it will return the existing instance inside the collection. 
 
-        For better performance wrap the L input param in a round(L, ndigits=2).
+        :param section: section object
+        
+        :param float L: length of the element
+
+        :param _elementClass: element class that is going to be added
         """
         for beam in self.__beam_elements:
             # Checks if there is already a element with same proprieties
             if beam.match(section, L):
                 return beam
         # If no such element is defined, creates one
-        new_beam = _elementClass(section, L)
+        new_beam = _elementClass(section, round(L, ndigits=2))
         self.__beam_elements.append(new_beam)
         return new_beam
 
     def get_beams(self) -> List[Element]:
-        """Returns the list of beam elements in the SectionCollection."""
+        """
+        Returns the list of beam elements in the SectionCollection
+        """
         return self.__beam_elements
 
     def get_columns(self) -> List[Element]:
-        """Returns the list of column elements in the SectionCollection."""
+        """
+        Returns the list of column elements in the SectionCollection
+        """
         return self.__column_elements
 
     def reset(self, beams: bool=True, columns: bool=True) -> None:
-        """Resets the element collection."""
+        """
+        Resets the element collection
+        """
         if beams:
             self.__beam_elements = list()
         if columns:

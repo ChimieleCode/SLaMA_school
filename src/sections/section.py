@@ -3,7 +3,9 @@ from abc import ABC, abstractmethod
 from model.enums import Direction
 
 class Section(ABC):
-    """Abstract method for section"""
+    """
+    Abstract class for section
+    """
     # add return type
     @abstractmethod
     def moment_curvature(self, direction: Direction, axial: float=0.):
