@@ -9,4 +9,4 @@ class NodeType(str, Enum):
 
 class Direction(int, Enum):
     Positive    = 1
-    negative    = -1
+    Negative    = -1

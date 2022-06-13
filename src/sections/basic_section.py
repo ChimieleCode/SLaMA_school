@@ -18,7 +18,18 @@ class BasicSection(Section):
         self.__steel = steel
 
     def moment_curvature(self, direction: Direction, axial: float):
-        print('not coded yet')
+        """
+        Computes the yielding point and ultimate point of moment curvature
+        """
+        # if direction is negative swap top and bottom reinforcement
+        if direction == Direction.Positive:
+            As_top = self.__section_data.As1
+            As_bot = self.__section_data.As
+        else:
+            As_top = self.__section_data.As
+            As_bot = self.__section_data.As1
+
+        # Computes the 
     
     def shear_capacity(self):
         print('not coded yet')

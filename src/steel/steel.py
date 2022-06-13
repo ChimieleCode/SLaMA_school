@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 from functools import cache
 
-@dataclass
+@dataclass(frozen=True)
 class Steel:
     id          : str
     fy          : float
