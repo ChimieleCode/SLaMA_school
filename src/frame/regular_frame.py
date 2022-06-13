@@ -1,7 +1,10 @@
 from functools import cache
 from typing import List, Tuple
-from model.validation.frame_input import Regular2DFrameInput
+from model.validation import Regular2DFrameInput
 from src.frame.graph import Graph, NodeNotFoundError
+from src.collections import SectionCollection, ElementCollection
+from src.elements import Element
+
 
 class RegularFrame(Graph):
     
@@ -170,13 +173,6 @@ class RegularFrame(Graph):
         """
 
 
-
-
-
-    
-from src.collections.element_collection import ElementCollection
-from src.collections.section_collection import SectionCollection
-from src.elements.element import Element
     
 class RegularFrameBuilder:
 

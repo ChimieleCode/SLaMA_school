@@ -1,9 +1,9 @@
 from dataclasses import field, dataclass
-from tkinter import N
 from typing import Optional
 from model.enums import NodeType
 from model.global_constants import NODES_KJ_VALUES
-from src.elements.element import Element
+from src.elements import Element
+from src.frame import RegularFrame
 
 @dataclass
 class Subassembly:
@@ -48,10 +48,6 @@ class Subassembly:
             return NodeType.Internal
     
 
-
-
-
-from src.frame.regular_frame import RegularFrame
 
 class SubassemblyFactory:
 

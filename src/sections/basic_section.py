@@ -1,7 +1,7 @@
 from model.validation.section_model import BasicSectionInput
 from model.enums import Direction
-from src.concrete.concrete import Concrete
-from src.steel.steel import Steel
+from src.concrete import Concrete
+from src.steel.steel import Steel  # does not see the package
 from src.sections.section import Section
 
 class BasicSection(Section):

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from model.enums import Direction
-from src.sections.section import Section
+from src.sections import Section
 
 class Element(ABC):
     """
