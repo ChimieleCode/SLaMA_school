@@ -25,3 +25,11 @@ class Element(ABC):
     @abstractmethod
     def match(self, section: Section, L: float) -> bool:
         pass
+
+    @abstractmethod
+    def get_element_lenght(self) -> float:
+        pass
+
+    @abstractmethod
+    def get_section(self) -> Section:
+        pass

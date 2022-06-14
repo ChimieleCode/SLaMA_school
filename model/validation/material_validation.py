@@ -10,6 +10,9 @@ class SimpleConcreteInput(BaseModel):
     epsilon_0   : float
     epsilon_u   : float
 
+    class Config:
+        frozen = True
+
 
 class SimpleSteelInput(BaseModel):
     """
@@ -20,6 +23,9 @@ class SimpleSteelInput(BaseModel):
     fu          : float
     E           : float
     epsilon_u   : float
+
+    class Config:
+        frozen = True
 
 
 class SimpleMaterialInput(BaseModel):

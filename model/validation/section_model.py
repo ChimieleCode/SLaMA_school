@@ -15,6 +15,10 @@ class BasicSectionInput(BaseModel):
     s               : float
     id              : str
 
+    class Config:
+        frozen = True
+        
+
 class BasicSectionCollectionInput(BaseModel):
     columns : List[BasicSectionInput]
     beams   : List[BasicSectionInput]

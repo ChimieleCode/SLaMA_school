@@ -15,6 +15,9 @@ class Regular2DFrameInput(BaseModel):
     columns : List[List[int]]
     beams   : List[List[int]]
 
+    class Config:
+        frozen = True
+
     @validator('H')
     def H_comulative_no_ground_floor(cls, value):
         if abs(value[0]) <= 0.001:

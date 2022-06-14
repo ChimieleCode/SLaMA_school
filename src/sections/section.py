@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 from model.enums import Direction
 
@@ -6,19 +7,20 @@ class Section(ABC):
     """
     Abstract class for section
     """
-    # add return type
     @abstractmethod
-    def moment_curvature(self, direction: Direction, axial: float=0.):
+    def moment_curvature(self, direction: Direction, axial: float=0.) -> dict:
         pass
 
-    # add return type
     @abstractmethod
-    def domain_MN(self, axial: float) -> float:
+    def domain_MN(self, axial: List[float]) -> List[float]:
         pass
 
-    # add return type
     @abstractmethod
-    def shear_capacity(self):
+    def shear_capacity(self, L: float, axial: float = 0.) -> dict:
+        pass
+
+    @abstractmethod
+    def plastic_hinge_length(self, L: float) -> float:
         pass
     
     @abstractmethod
