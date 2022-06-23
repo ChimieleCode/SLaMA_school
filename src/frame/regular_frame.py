@@ -1,5 +1,8 @@
 from functools import cache
 from typing import List, Tuple
+from typing_extensions import Self
+import numpy as np
+
 from model.validation import Regular2DFrameInput
 from src.frame.graph import Graph, NodeNotFoundError
 from src.collections import SectionCollection, ElementCollection
@@ -18,7 +21,7 @@ class RegularFrame(Graph):
 
         :param int node_count: number of nodes of frame
 
-        :param lenghts: x coordinates of columns starting from 0
+        :param lengths: x coordinates of columns starting from 0
 
         :param heights: z coordinates of floors excluding ground floor
 
@@ -27,7 +30,7 @@ class RegularFrame(Graph):
         :param loadas: vertical load on each node (from tributary areas)
         """
         super().__init__(node_count)
-        self.__lenghts = lengths
+        self.__lengths = lengths
         self.__heights = heights
         self.__masses = masses
         self.__loads = loads
@@ -35,12 +38,12 @@ class RegularFrame(Graph):
     @property
     @cache
     def spans(self) -> int:
-        return len(self.__lenghts) - 1
+        return len(self.__lengths) - 1
 
     @property
     @cache
     def verticals(self) -> int:
-        return len(self.__lenghts)
+        return len(self.__lengths)
     
     @property
     @cache
@@ -56,7 +59,64 @@ class RegularFrame(Graph):
         # See §7.3.3.2 of NTC2018
         force_height = sum(mass * height for mass, height in zip(self.__masses, self.__heights))
         return tuple((mass * height) / force_height for mass, height in zip(self.__masses, self.__heights))
+    
+    @property
+    @cache
+    def __delta_axial_ratios(self) -> dict:
+        """
+        Computes the delta axial ratios for all the external nodes
+        """
+        heights = [0.] + self.__heights
+        floor_shear = np.cumsum(
+            np.flip(self.floor_forces_distribution)
+        )
+        interstorey_heights = np.flip(np.diff(heights))
+        columns_floor_otm = [
+            0.5 * inter_height * force 
+            for inter_height, force in zip(interstorey_heights, floor_shear)
+        ]
+        overturning_moment = np.flip(
+            [
+                np.dot(
+                    np.array(heights[floor:]) - heights[floor], 
+                    (0.,) + self.floor_forces_distribution[floor:]
+                )
+                for floor, _  in enumerate(heights)
+            ]
+        )
+        delta_axials = [
+            (otm - columns_otm)/self.__lengths[-1]
+            for otm, columns_otm in zip(overturning_moment[1:], columns_floor_otm)
+        ]
 
+        first_span_lenght = self.__lengths[1]
+        last_span_lenght = self.__lengths[-1] - self.__lengths[-2]
+
+        # Computes equivalent moments for delta axials
+        beam_shears = np.diff(delta_axials, prepend=[0.])
+        moment_beams_upwind = 0.5 * beam_shears * first_span_lenght
+        moment_beams_downwind = 0.5 * beam_shears * last_span_lenght
+                
+        moment_column_upwind = [moment_beams_upwind[0]]
+        moment_column_downwind = [moment_beams_downwind[0]]
+        for floor in range(1, self.floors):
+            moment_column_upwind.append(moment_beams_upwind[floor] - moment_column_upwind[floor - 1])
+            moment_column_downwind.append(moment_beams_upwind[floor] - moment_column_upwind[floor - 1])
+            
+        return {
+            'upwind' : np.flip(
+                [
+                    delta/moment
+                    for delta, moment in zip(delta_axials, moment_column_upwind)
+                ]
+            ),
+            'downwind' : np.flip(
+                [
+                    -delta/moment
+                    for delta, moment in zip(delta_axials, moment_column_downwind)
+                ],
+            ),
+        }
     
     def get_node_id(self, floor: int, vertical: int) -> int:
         """
@@ -103,10 +163,10 @@ class RegularFrame(Graph):
             raise NodeNotFoundError('Given node does not exist')
         position = self.get_node_position(node)
         return {
-            'X': self.L[position['vertical']],
+            'X': self.__lengths[position['vertical']],
             'Z': self.__heights[position['floor']]
         }
-
+    
     def get_interstorey_height(self, floor: int) -> float:
         """
         Returns the interstorey height of given storey
@@ -120,38 +180,27 @@ class RegularFrame(Graph):
     
     def get_span_length(self, span: int) -> float:
         """
-        Returns the span lenght given the span number starting from 0
+        Returns the span length given the span number starting from 0
         """
         if span >= self.spans or span < 0:
             raise NodeNotFoundError('Specified span does not exist')
         else:
-            return self.__lenghts[span + 1] - self.__lenghts[span]
+            return self.__lengths[span + 1] - self.__lengths[span]
 
     def get_delta_axial(self, node: int) -> float:
         """
         Returns the deltaN value normalized for a column moment of 1 kNm given the id of node
         """
-        # Determines the influence lenght and sign of Delta_N
         if self.get_node_vertical(node) == 0:
-            influence_length = self.get_span_length(1) / 2
-            delta_N = 1
-        elif self.get_node_vertical(node) == self.spans:
-            influence_length = self.get_span_length(self.spans - 1) / 2
-            delta_N = -1
+            return self.__delta_axial_ratios['upwind'][self.get_node_floor(node) - 1]
+
+        elif self.get_node_vertical(node) == self.verticals - 1:
+            return self.__delta_axial_ratios['downwind'][self.get_node_floor(node) - 1]
+
         else:
-            # If node is internal, no delta is present
             return 0
-        # Get floor level below
-        floor = self.get_node_floor(node) - 1
-        # Base nodes does not have a floor below
-        if floor < 0:
-            floor = 0
-        floor_shear = sum(self.floor_forces_distribution[floor:])
-        interstorey_height = self.get_interstorey_height(floor)
-        # Delta N normalization
-        delta_N = delta_N * (sum(force * height for force, height in zip(self.floor_forces_distribution[floor:], self.__heights[floor:])) - 0.5 * interstorey_height * floor_shear) / self.__lenghts[-1]
-        M_col = 0.5 * floor_shear * interstorey_height * influence_length/self.__lenghts[-1]
-        return delta_N / M_col  
+            # internal node, no delta
+    
 
     def get_axial(self, node: int) -> float:
           """
@@ -159,21 +208,48 @@ class RegularFrame(Graph):
           """
           return round(sum(self.__loads[node::self.verticals]), ndigits=2)
 
+    def get_floor_height(self, floor: int) -> float:
+        """
+        Returns the absolute height of a given floor
+        """
+        if floor <= 0 or floor > self.floors:
+            raise NodeNotFoundError('Specified span does not exist')
+        return self.__heights[floor - 1]
+
+    def get_heights(self) -> List[float]:
+        """
+        Returns the heights of every floor
+        """
+        return self.__heights
+
+    def get_lengths(self) -> List[float]:
+        """
+        Returns the heights of every floor
+        """
+        return self.__lengths
+
     def __str__(self) -> str:
         return f"""
         Regular2DFrame Object
         verticals   : {self.verticals}
         floors      : {self.floors}
-        L           : {self.__lenghts}
+        L           : {self.__lengths}
         H           : {self.__heights}
         m           : {self.__masses}
         loads       : {self.__loads}
         sections    : .elements
         graph       : use repr()
         """
+    
+
+
 
 
     
+
+
+
+
 class RegularFrameBuilder:
 
     def __init__(self, 
@@ -215,10 +291,10 @@ class RegularFrameBuilder:
             """
             for vertical in range(self.__frame.verticals):
                 node = vertical + (floor * self.__frame.verticals)
-                column_data = self.__column_lenght(floor, vertical)
+                column_data = self.__column_length(floor, vertical)
                 element = self.__elements.add_column_element(
                     section=self.__sections.get_columns()[column_data['tag']], 
-                    L=round(column_data['lenght'], ndigits=2),
+                    L=round(column_data['length'], ndigits=2),
                     _elementClass=self.__element_object      
                 )
                 self.__add_element(node, node + self.__frame.verticals, element)
@@ -229,10 +305,10 @@ class RegularFrameBuilder:
             """
             for span in range(self.__frame.spans):
                 node = span + ((floor + 1) * self.__frame.verticals)
-                beam_data = self.__beam_lenght(floor, span)
+                beam_data = self.__beam_length(floor, span)
                 element = self.__elements.add_beam_element(
                     section=self.__sections.get_beams()[beam_data['tag']], 
-                    L=round(beam_data['lenght'], ndigits=2),
+                    L=round(beam_data['length'], ndigits=2),
                     _elementClass=self.__element_object
                 )
                 self.__add_element(node, node + 1, element)
@@ -243,9 +319,9 @@ class RegularFrameBuilder:
             __add_storey_columns(floor)
 
 
-    def __column_lenght(self, floor: int, vertical: int) -> dict:
+    def __column_length(self, floor: int, vertical: int) -> dict:
         """
-        Computes the shear lenghts of specified element
+        Computes the shear lengths of specified element
         """
         if floor == 0:
             H_storey = self.__frame_data.H[0]
@@ -257,34 +333,34 @@ class RegularFrameBuilder:
             beam_tag = self.__frame_data.beams[floor][0]
             return {
                 'tag': self.__frame_data.columns[floor][0],
-                'lenght': (H_storey - self.__sections.get_beams()[beam_tag].get_height())
+                'length': (H_storey - self.__sections.get_beams()[beam_tag].get_height())
             }
         elif vertical == self.__frame.spans:
             # Gets the tag of the last beam section connected on top
             beam_tag = self.__frame_data.beams[floor][-1]
             return {
                 'tag': self.__frame_data.columns[floor][-1],
-                'lenght': (H_storey - self.__sections.get_beams()[beam_tag].get_height())
+                'length': (H_storey - self.__sections.get_beams()[beam_tag].get_height())
             }
         else:
             beam_tag_1 = self.__frame_data.beams[floor][vertical]
             beam_tag_2 = self.__frame_data.beams[floor][vertical - 1]
             return {
                 'tag': self.__frame_data.columns[floor][vertical],
-                'lenght': (H_storey - max(self.__sections.get_beams()[beam_tag_1].get_height(), self.__sections.get_beams()[beam_tag_2].get_height()))
+                'length': (H_storey - max(self.__sections.get_beams()[beam_tag_1].get_height(), self.__sections.get_beams()[beam_tag_2].get_height()))
             }
 
         
-    def __beam_lenght(self, floor: int, span: int) -> dict:
+    def __beam_length(self, floor: int, span: int) -> dict:
         """
-        Computes the shear lenghts of specified element
+        Computes the shear lengths of specified element
         """
         L_span = self.__frame_data.L[span + 1] - self.__frame_data.L[span]
         column_tag_1 = self.__frame_data.columns[floor][span]
         column_tag_2 = self.__frame_data.columns[floor][span + 1]
         return{
             'tag': self.__frame_data.beams[floor][span],
-            'lenght': (L_span - 0.5 * (self.__sections.get_columns()[column_tag_1].get_height() + self.__sections.get_columns()[column_tag_2].get_height()))
+            'length': (L_span - 0.5 * (self.__sections.get_columns()[column_tag_1].get_height() + self.__sections.get_columns()[column_tag_2].get_height()))
         }
     
     def __add_element(self, node1: int, node2: int, element: Element) -> None:
@@ -300,9 +376,64 @@ class RegularFrameBuilder:
             i_node=node2,
             j_node=node1,
             weight=element)
-    
-
-    
 
 
     
+
+@cache
+def delta_axial_ratios(self: RegularFrame) -> dict:
+    """
+    Computes the delta axial ratios for all the external nodes
+    """
+    heights = [0.] + self.__heights
+    floor_shear = np.cumsum(
+        np.flip(self.floor_forces_distribution)
+    )
+    interstorey_heights = np.flip(np.diff(heights))
+    columns_floor_otm = [
+        0.5 * inter_height * force 
+        for inter_height, force in zip(interstorey_heights, floor_shear)
+    ]
+    overturning_moment = np.flip(
+        [
+            np.dot(
+                np.array(heights[floor:]) - heights[floor], 
+                (0.,) + self.floor_forces_distribution[floor:]
+            )
+            for floor, _  in enumerate(heights)
+        ]
+    )
+    delta_axials = [
+        (otm - columns_otm)/self.__lengths[-1]
+        for otm, columns_otm in zip(overturning_moment[1:], columns_floor_otm)
+    ]
+
+    first_span_lenght = self.__lengths[1]
+    last_span_lenght = self.__lengths[-1] - self.__lengths[-2]
+
+    # Computes equivalent moments for delta axials
+    beam_shears = np.diff(delta_axials, prepend=[0.])
+    moment_beams_upwind = 0.5 * beam_shears * first_span_lenght
+    moment_beams_downwind = 0.5 * beam_shears * last_span_lenght
+            
+    moment_column_upwind = [moment_beams_upwind[0]]
+    moment_column_downwind = [moment_beams_downwind[0]]
+    for floor in range(1, self.floors):
+        moment_column_upwind.append(moment_beams_upwind[floor] - moment_column_upwind[floor - 1])
+        moment_column_downwind.append(moment_beams_upwind[floor] - moment_column_upwind[floor - 1])
+    print(len(moment_beams_upwind))
+    return {
+        'upwind' : np.flip(
+            [
+                delta/moment
+                for delta, moment in zip(delta_axials, moment_column_upwind)
+            ]
+        ),
+        'downwind' : np.flip(
+            [
+                -delta/moment
+                for delta, moment in zip(delta_axials, moment_column_downwind)
+            ],
+        ),
+    }
+

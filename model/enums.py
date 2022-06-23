@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 class NodeType(str, Enum):
     Internal    = 'internal'
@@ -10,3 +10,17 @@ class NodeType(str, Enum):
 class Direction(int, Enum):
     Positive    = 1
     Negative    = -1
+
+class FailureType(Enum):
+    ShearDuctile = auto()
+    ShearFragile = auto()
+    Moment       = auto()
+
+class SectionType(Enum):
+    Beam   = auto()
+    Column = auto()
+
+class ElementType(str, Enum):
+    Joint   = 'joint'
+    Beam    = 'beam'
+    Column  = 'column'

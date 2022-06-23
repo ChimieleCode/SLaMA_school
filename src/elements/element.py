@@ -12,14 +12,8 @@ class Element(ABC):
     def __init__(self, section: Section, L: float) -> None:
         pass
 
-    # add return type
     @abstractmethod
-    def moment_rotation(self, direction: Direction, axial: float=0.):
-        pass
-
-    # add return type
-    @abstractmethod
-    def shear_moment_interaction(self, axial: float=0.) -> None:
+    def moment_rotation(self, direction: Direction, axial: float=0., consider_shear_iteraction: bool=True) -> dict:
         pass
 
     @abstractmethod

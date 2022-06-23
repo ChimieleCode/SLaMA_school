@@ -4,7 +4,7 @@ from functools import cache
 from typing import List
 
 from model.validation.section_model import BasicSectionInput
-from model.enums import Direction
+from model.enums import Direction, SectionType
 from src.concrete import Concrete
 from src.steel.steel import Steel  
 from src.sections.section import Section
@@ -14,15 +14,17 @@ class BasicSection(Section):
     def __init__(self, 
                  section_data: BasicSectionInput, 
                  concrete: Concrete, 
-                 steel: Steel)-> None:
+                 steel: Steel,
+                 section_type: SectionType)-> None:
         """
         Defines an object that contains section data
         """
         self.__section_data = section_data
         self.__concrete = concrete
         self.__steel = steel
+        self.__section_type = section_type
 
-    def moment_curvature(self, direction: Direction, axial: float):
+    def moment_curvature(self, direction: Direction = Direction.Positive, axial: float = 0.) -> dict:
         """
         Computes the yielding point and ultimate point of moment curvature
         """
@@ -74,6 +76,16 @@ class BasicSection(Section):
         Returns the section height
         """
         return self.__section_data.h
+
+    def get_effective_width(self) -> float:
+        """
+        Returns the effective width of the section
+        """
+        return self.__section_data.b
+
+    @cache
+    def get_depth(self) -> float:
+        return self.__section_data.h - self.__section_data.cover
     
     def get_section_data(self) -> BasicSectionInput:
         """
@@ -92,6 +104,12 @@ class BasicSection(Section):
         Returns the steel material
         """
         return self.__steel
+
+    def get_section_type(self) -> SectionType:
+        """
+        Return section type
+        """
+        return self.__section_type
 
     def __str__(self) -> str:
         return f"""
@@ -118,14 +136,24 @@ def analytic_coment_curvature(section_data: BasicSectionInput,
                               axial: float = 0) -> dict:
     """
     Computes the moment curvature of a BasicSection using analytical formulation
+
+    :params section_data: validated section data for a given section object
+
+    :params concrete: concrete of the section
+
+    :params steel: steel of the rebars
+
+    :params direction: direction of bending (positive mean lower reinforcement is in tension)
+    
+    :params axial: axial stress acting on the section
     """
     # if direction is negative, swaps the top and bottom reinfocement
     if direction == Direction.Positive:
         # reinforcement_area (As_top, As_bot)
-        reinforcement_area = (section_data.As, section_data.As1)
+        reinforcement_area = (section_data.As1, section_data.As)
     else:
         # reinforcement_area (As_top, As_bot)
-        reinforcement_area = (section_data.As1, section_data.As)
+        reinforcement_area = (section_data.As, section_data.As1)
     
     moment_curvature = dict()
     
@@ -189,9 +217,23 @@ def analytic_coment_curvature(section_data: BasicSectionInput,
 # -----------------------------------------------------
 
 @cache
-def shear_NZSEE2017(section_data: BasicSectionInput, concrete: Concrete, steel: Steel, L: float, axial: float = 0.):
+def shear_NZSEE2017(section_data: BasicSectionInput, 
+                    concrete: Concrete, 
+                    steel: Steel, 
+                    L: float, 
+                    axial: float = 0.) -> dict:
     """
     Shear capacity model provided by NZSEE2017
+
+    :params section_data: validated section data for a given section object
+
+    :params concrete: concrete of the section
+
+    :params steel: steel of the rebars
+
+    :params L: length of the elemtn that contains the section
+    
+    :params axial: axial stress acting on the section
     """
     section_depth = section_data.h - section_data.cover
 
@@ -233,7 +275,24 @@ def shear_NZSEE2017(section_data: BasicSectionInput, concrete: Concrete, steel: 
 # MN Domains Algorithms
 # -----------------------------------------------------
 
-def four_points_MN_domain(section_data: BasicSectionInput, concrete: Concrete, steel: Steel, axial: List[float], direction: Direction = Direction.Positive) -> List[float]:
+def four_points_MN_domain(section_data: BasicSectionInput, 
+                          concrete: Concrete, 
+                          steel: Steel, 
+                          axial: List[float], 
+                          direction: Direction = Direction.Positive) -> List[float]:
+    """
+    Computes the moment resisting values of the MN domain for the given axial values
+
+    :params section_data: validated section data for a given section object
+
+    :params concrete: concrete of the section
+
+    :params steel: steel of the rebars
+    
+    :params axial: axial stress points for the evaluation of the domain
+
+    :params direction: direction of bending (positive mean lower reinforcement is in tension)
+    """
 
     @cache
     def __compute_domain(section_data: BasicSectionInput, concrete: Concrete, steel: Steel, direction: Direction = Direction.Positive) -> dict:
@@ -241,9 +300,9 @@ def four_points_MN_domain(section_data: BasicSectionInput, concrete: Concrete, s
         Computes the four points of the domain
         """
         if direction == Direction.Positive:
-            reinforcement_area = (section_data.As, section_data.As1)
-        else:
             reinforcement_area = (section_data.As1, section_data.As)
+        else:
+            reinforcement_area = (section_data.As, section_data.As1)
 
         # Point A
         axial_A = -steel.fy * sum(reinforcement_area)
