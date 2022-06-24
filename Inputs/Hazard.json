@@ -1,0 +1,122 @@
+{
+    "ag" : [
+        {
+            "limit_state": "81%", 
+            "value": 0.0658
+        },
+        {
+            "limit_state": "63%",
+            "value": 0.0885
+        },
+        {
+            "limit_state": "50%",
+            "value": 0.1066
+        },
+        {
+            "limit_state": "39%",
+            "value": 0.1252
+        },
+        {
+            "limit_state": "30%",
+            "value": 0.1466
+        },
+        {
+            "limit_state": "22%",
+            "value": 0.1728
+        },
+        {
+            "limit_state": "10%",
+            "value": 0.2501
+        },
+        {
+            "limit_state": "5%",
+            "value": 0.3364
+        },
+        {
+            "limit_state": "2%",
+            "value": 0.4804
+        }
+    ],
+    "F0" : [
+        {
+            "limit_state": "81%", 
+            "value": 2.499
+        },
+        {
+            "limit_state": "63%",
+            "value": 2.462
+        },
+        {
+            "limit_state": "50%",
+            "value": 2.433
+        },
+        {
+            "limit_state": "39%",
+            "value": 2.423
+        },
+        {
+            "limit_state": "30%",
+            "value": 2.412
+        },
+        {
+            "limit_state": "22%",
+            "value": 2.401
+        },
+        {
+            "limit_state": "10%",
+            "value": 2.413
+        },
+        {
+            "limit_state": "5%",
+            "value": 2.417
+        },
+        {
+            "limit_state": "2%",
+            "value": 2.401
+        }
+    ],
+    "Tc_star" : [
+        {
+            "limit_state": "81%", 
+            "value": 0.241
+        },
+        {
+            "limit_state": "63%",
+            "value": 0.258
+        },
+        {
+            "limit_state": "50%",
+            "value": 0.271
+        },
+        {
+            "limit_state": "39%",
+            "value": 0.283
+        },
+        {
+            "limit_state": "30%",
+            "value": 0.293
+        },
+        {
+            "limit_state": "22%",
+            "value": 0.311
+        },
+        {
+            "limit_state": "10%",
+            "value": 0.331
+        },
+        {
+            "limit_state": "5%",
+            "value": 0.349
+        },
+        {
+            "limit_state": "2%",
+            "value": 0.377
+        }
+    ],
+    "Cu" : 1,
+    "Vn" : 50,
+    "design_intensity" : "10%",
+    "soil_category" : "C",
+    "topographic_category" : "T1",
+    "spectrum_comp_points" : 80
+}

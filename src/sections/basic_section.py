@@ -38,17 +38,26 @@ class BasicSection(Section):
     
     # def domain_MN(self, axial: float) -> float:
     #     print('not coded yet')
-    def domain_MN(self, axial: List[float], direction: Direction = Direction.Positive) -> List[float]:
+    def domain_MN(self, axial: float, direction: Direction = Direction.Positive) -> float:
         """
         Computes the MN domain of the section
         """
-        return four_points_MN_domain(
+        domain = four_points_MN_domain(
             section_data=self.__section_data,
             concrete=self.__concrete,
             steel=self.__steel,
-            axial=axial,
             direction=direction
         )
+
+        return float(
+            np.interp(
+                x=axial, 
+                xp=domain['axial'],
+                fp=domain['moment'],
+                left=0,
+                right=0
+                )
+            )
 
     def shear_capacity(self, L: float, axial: float = 0.) -> dict:
         """
@@ -274,104 +283,79 @@ def shear_NZSEE2017(section_data: BasicSectionInput,
 # -----------------------------------------------------
 # MN Domains Algorithms
 # -----------------------------------------------------
-
+@cache
 def four_points_MN_domain(section_data: BasicSectionInput, 
                           concrete: Concrete, 
                           steel: Steel, 
-                          axial: List[float], 
                           direction: Direction = Direction.Positive) -> List[float]:
     """
-    Computes the moment resisting values of the MN domain for the given axial values
+    Computes the four points of the domain
 
     :params section_data: validated section data for a given section object
 
     :params concrete: concrete of the section
 
     :params steel: steel of the rebars
-    
-    :params axial: axial stress points for the evaluation of the domain
 
     :params direction: direction of bending (positive mean lower reinforcement is in tension)
     """
+    if direction == Direction.Positive:
+        reinforcement_area = (section_data.As1, section_data.As)
+    else:
+        reinforcement_area = (section_data.As, section_data.As1)
 
-    @cache
-    def __compute_domain(section_data: BasicSectionInput, concrete: Concrete, steel: Steel, direction: Direction = Direction.Positive) -> dict:
-        """
-        Computes the four points of the domain
-        """
-        if direction == Direction.Positive:
-            reinforcement_area = (section_data.As1, section_data.As)
-        else:
-            reinforcement_area = (section_data.As, section_data.As1)
+    # Point A
+    axial_A = -steel.fy * sum(reinforcement_area)
+    moment_A = steel.fy * (reinforcement_area[1] - reinforcement_area[0]) * (section_data.h / 2 - section_data.cover)
 
-        # Point A
-        axial_A = -steel.fy * sum(reinforcement_area)
-        moment_A = steel.fy * (reinforcement_area[1] - reinforcement_area[0]) * (section_data.h / 2 - section_data.cover)
+    # Point B
+    neutral_axis = (section_data.h - section_data.cover) * concrete.epsilon_u / (concrete.epsilon_u + 10**-2)
+    epsilon_steel_top = concrete.epsilon_u/neutral_axis * (neutral_axis - section_data.cover)
 
-        # Point B
-        neutral_axis = (section_data.h - section_data.cover) * concrete.epsilon_u / (concrete.epsilon_u + 10**-2)
-        epsilon_steel_top = concrete.epsilon_u/neutral_axis * (neutral_axis - section_data.cover)
-
-        axial_B = (
-            neutral_axis * 0.8 * section_data.b * concrete.fc 
-            + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) 
-            - reinforcement_area[1] * steel.fy
-            )
-        moment_B = (
-            neutral_axis * 0.8 * section_data.b * concrete.fc * (section_data.h/2 - 0.4 * neutral_axis) 
-            + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) * (section_data.h/2 - section_data.cover)
-            + reinforcement_area[1] * steel.fy * (section_data.h/2 - section_data.cover)
+    axial_B = (
+        neutral_axis * 0.8 * section_data.b * concrete.fc 
+        + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) 
+        - reinforcement_area[1] * steel.fy
         )
-
-        # Point C
-        neutral_axis = (section_data.h - section_data.cover) * concrete.epsilon_u / (concrete.epsilon_u + steel.epsilon_y)
-        epsilon_steel_top = concrete.epsilon_u/neutral_axis * (neutral_axis - section_data.cover)
-
-        axial_C = (
-            neutral_axis * 0.8 * section_data.b * concrete.fc 
-            + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) 
-            - reinforcement_area[1] * steel.fy
-            )
-        moment_C = (
-            neutral_axis * 0.8 * section_data.b * concrete.fc * (section_data.h/2 - 0.4 * neutral_axis) 
-            + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) * (section_data.h/2 - section_data.cover)
-            + reinforcement_area[1] * steel.fy * (section_data.h/2 - section_data.cover)
-        )
-
-        # Point D
-        axial_D = section_data.b * section_data.h * concrete.fc - axial_A
-        moment_D = -moment_A 
-
-        return {
-            'moment' : (
-                moment_A,
-                moment_B,
-                moment_C,
-                moment_D
-            ),
-            'axial' : (
-                axial_A,
-                axial_B,
-                axial_C,
-                axial_D
-            )
-        }
-
-    domain = __compute_domain(
-        section_data=section_data,
-        concrete=concrete,
-        steel=steel
+    moment_B = (
+        neutral_axis * 0.8 * section_data.b * concrete.fc * (section_data.h/2 - 0.4 * neutral_axis) 
+        + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) * (section_data.h/2 - section_data.cover)
+        + reinforcement_area[1] * steel.fy * (section_data.h/2 - section_data.cover)
     )
 
-    return list(
-        np.interp(
-            x=axial, 
-            xp=domain['axial'],
-            fp=domain['moment'],
-            left=0,
-            right=0
-            )
+    # Point C
+    neutral_axis = (section_data.h - section_data.cover) * concrete.epsilon_u / (concrete.epsilon_u + steel.epsilon_y)
+    epsilon_steel_top = concrete.epsilon_u/neutral_axis * (neutral_axis - section_data.cover)
+
+    axial_C = (
+        neutral_axis * 0.8 * section_data.b * concrete.fc 
+        + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) 
+        - reinforcement_area[1] * steel.fy
         )
+    moment_C = (
+        neutral_axis * 0.8 * section_data.b * concrete.fc * (section_data.h/2 - 0.4 * neutral_axis) 
+        + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) * (section_data.h/2 - section_data.cover)
+        + reinforcement_area[1] * steel.fy * (section_data.h/2 - section_data.cover)
+    )
+
+    # Point D
+    axial_D = section_data.b * section_data.h * concrete.fc - axial_A
+    moment_D = -moment_A 
+
+    return {
+        'moment' : (
+            moment_A,
+            moment_B,
+            moment_C,
+            moment_D
+        ),
+        'axial' : (
+            axial_A,
+            axial_B,
+            axial_C,
+            axial_D
+        )
+    }
 
 
 

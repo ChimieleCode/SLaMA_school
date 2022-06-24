@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from turtle import right
 
 class NodeType(str, Enum):
     Internal    = 'internal'
@@ -21,6 +22,10 @@ class SectionType(Enum):
     Column = auto()
 
 class ElementType(str, Enum):
-    Joint   = 'joint'
-    Beam    = 'beam'
-    Column  = 'column'
+    Joint       = 'joint'
+    Beam        = 'beam'
+    Column      = 'column'
+    AboveColumn = 'abovecolumn'
+    BelowColumn = 'belowcolumn'
+    LeftBeam    = 'leftbeam'
+    RightBeam   = 'rightbeam'

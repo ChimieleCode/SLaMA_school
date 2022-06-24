@@ -87,7 +87,7 @@ class Subassembly:
         )
 
     # Public methods
-    def domain_MN(self, axial: List[float]) -> List[float]:
+    def domain_MN(self, axial: float) -> List[float]:
         """
         Get MN domain of the joint
         """
@@ -100,117 +100,33 @@ class Subassembly:
         )
         tensile_strength_MPa = self.kj * math.sqrt(self.below_column.get_section().get_concrete().fc * 10**-3)
 
-        def __probable_shear_capacity(axial: float) -> float:
-            """
-            Computes the probable capacity of the node in column equivalent moment
-            """
-            try:
-                return (
-                    0.85 * node_area 
-                    * tensile_strength_MPa * 10**3
-                    * math.sqrt(1 + axial * 10**-3 / (node_area * tensile_strength_MPa)) 
-                    * self.__shear_moment_conversion_factor()
-                )
-            except ValueError:
-                return 0
-        
-        return [__probable_shear_capacity(axial_load) for axial_load in axial]
+        try:
+            return (
+                0.85 * node_area 
+                * tensile_strength_MPa * 10**3
+                * math.sqrt(1 + axial * 10**-3 / (node_area * tensile_strength_MPa)) 
+                * self.__shear_moment_conversion_factor()
+            )
+        except ValueError:
+            return 0
 
-    def delta_axial_moment(self, axials: List[float], direction: Direction = Direction.Positive) -> List[float]: 
+    def delta_axial_moment(self, axial: float, direction: Direction = Direction.Positive) -> List[float]: 
         """
         Returns the moment that produces the given axial load
         """
         delta_N = self.delta_axial if direction is Direction.Positive else -self.delta_axial
         if delta_N == 0:
             delta_N = 10**-6
-        return [1/-delta_N * (axial - self.axial) for axial in axials]
+        return 1/-delta_N * (axial - self.axial)
 
-    @cache
     def get_hierarchy(self, direction: Direction = Direction.Positive) -> dict:
         """
         Returns the hierarchy of subassembly
         """
-        if self.node_type is NodeType.Base:
-            print('not coded yet')
-            return 0
-        
-        counter_direction = Direction.Negative if direction == Direction.Positive else Direction.Positive
-        
-        columns_number = (self.above_column is not None) + 1
-        beam_number = (self.left_beam is not None) + (self.right_beam is not None)
-        conversion_factor = beam_number / columns_number
-
-        beam_capacity_curve = lambda axial: conversion_factor/beam_number * sum(
-            [
-                self.left_beam.moment_rotation(counter_direction)['moment'][-1] if self.left_beam is not None else 0,
-                self.right_beam.moment_rotation(direction)['moment'][-1] if self.right_beam is not None else 0
-            ]
+        return single_hierarchy(
+            subassembly=self,
+            direction=direction
         )
-
-        column_capacity_curve = lambda axial: 1/columns_number * sum(
-            [
-                self.above_column.get_section().domain_MN([axial])[0] if self.above_column is not None else 0,
-                self.below_column.get_section().domain_MN([axial])[0]
-            ]
-        )
-
-        joint_capacity_curve = lambda axial: self.domain_MN([axial])[0]
-
-        delta_axial_curve = lambda axial: self.delta_axial_moment([axial], direction)[0]
-
-        joint_capacity_axial = analytical_intersection(self.axial, joint_capacity_curve, delta_axial_curve)
-        column_capacity_axial = analytical_intersection(self.axial, column_capacity_curve, delta_axial_curve)
-        beam_capacity_axial = analytical_intersection(self.axial, beam_capacity_curve, delta_axial_curve)
-
-        capacities = {
-            ElementType.Joint : delta_axial_curve(joint_capacity_axial),
-            ElementType.Column : delta_axial_curve(column_capacity_axial),
-            ElementType.Beam : delta_axial_curve(beam_capacity_axial)
-        }
-
-        weakest = ''
-        for key in capacities.keys():
-            if weakest != '' and capacities[key] < capacities[weakest]:
-                weakest = key
-            elif weakest == '':
-                weakest = key
-        
-        # find rotations of weakest element
-        if weakest == ElementType.Joint:
-            if self.node_type in (NodeType.External, NodeType.TopExternal):
-                rotation_capacities = EXTERNAL_NODE_ROTATION_CAPACITIES
-            else:
-                rotation_capacities = INTERNAL_NODE_ROTATION_CAPACITIES
-        elif weakest == ElementType.Beam:
-            rotation_capacities = (
-                min(
-                    self.left_beam.moment_rotation(counter_direction)['rotation'][0] if self.left_beam is not None else 1,
-                    self.right_beam.moment_rotation(direction)['rotation'][0] if self.right_beam is not None else 1
-                ),
-                min(
-                    self.left_beam.moment_rotation(counter_direction)['rotation'][-1] if self.left_beam is not None else 1,
-                    self.right_beam.moment_rotation(direction)['rotation'][-1] if self.right_beam is not None else 1
-                ),
-            )
-        elif weakest == ElementType.Column:
-            rotation_capacities = (
-                min(
-                    self.above_column.moment_rotation(counter_direction,axial=column_capacity_axial)['rotation'][0] if self.above_column is not None else 1,
-                    self.below_column.moment_rotation(direction,axial=column_capacity_axial)['rotation'][0]
-                ),
-                min(
-                    self.above_column.moment_rotation(counter_direction,axial=column_capacity_axial)['rotation'][-1] if self.above_column is not None else 1,
-                    self.below_column.moment_rotation(direction,axial=column_capacity_axial)['rotation'][-1]
-                ),
-            )
-        else:
-            raise AssertionError('We have no idea why it failed, but the subassembly could not find the weakest element')
-        
-        return{
-            'beam_equivalent' : 1/conversion_factor * capacities[weakest],
-            'rotation_yielding' : rotation_capacities[0],
-            'rotation_ultimate' : rotation_capacities[-1]
-        }
     
     def __hash__(self):
         return hash(
@@ -224,13 +140,6 @@ class Subassembly:
         )
 
 
-
-
-
-
-
-
-    
 
 
 class SubassemblyFactory:
@@ -279,6 +188,220 @@ class SubassemblyFactory:
         subassembly['delta_axial'] = self.__frame.get_delta_axial(node)
         return Subassembly(**subassembly)
 
+
+
+# -------------------------------------------------------------------------------------------------
+# Hierarchy functions
+# -------------------------------------------------------------------------------------------------
+
+@cache
+def avarage_hierarchy(subassembly: Subassembly, direction: Direction = Direction.Positive):
+    """
+    Returns the hierarchy of the subassembly considering the elements as avarage
+
+    :params subassembly: subassembly object
+
+    :params direction: direction of sway (Positive is from left to right) 
+    """
+    if subassembly.node_type is NodeType.Base:
+            raise NotImplementedError
         
+    counter_direction = Direction.Negative if direction == Direction.Positive else Direction.Positive
+        
+    columns_number = (subassembly.above_column is not None) + 1
+    beam_number = (subassembly.left_beam is not None) + (subassembly.right_beam is not None)
+    conversion_factor = beam_number / columns_number
 
+    beam_capacity_curve = lambda axial: conversion_factor/beam_number * sum(
+        [
+            subassembly.left_beam.moment_rotation(counter_direction)['moment'][-1] if subassembly.left_beam is not None else 0,
+            subassembly.right_beam.moment_rotation(direction)['moment'][-1] if subassembly.right_beam is not None else 0
+        ]
+    )
 
+    column_capacity_curve = lambda axial: 1/columns_number * sum(
+        [
+            subassembly.above_column.get_section().domain_MN(axial) if subassembly.above_column is not None else 0,
+            subassembly.below_column.get_section().domain_MN(axial)
+        ]
+    )
+
+    joint_capacity_curve = lambda axial: subassembly.domain_MN(axial)
+
+    delta_axial_curve = lambda axial: subassembly.delta_axial_moment(axial, direction)
+
+    joint_capacity_axial = analytical_intersection(subassembly.axial, joint_capacity_curve, delta_axial_curve)
+    column_capacity_axial = analytical_intersection(subassembly.axial, column_capacity_curve, delta_axial_curve)
+    beam_capacity_axial = analytical_intersection(subassembly.axial, beam_capacity_curve, delta_axial_curve)
+
+    capacities = {
+        ElementType.Joint : delta_axial_curve(joint_capacity_axial),
+        ElementType.Column : delta_axial_curve(column_capacity_axial),
+        ElementType.Beam : delta_axial_curve(beam_capacity_axial)
+    }
+
+    weakest = ''
+    for key in capacities.keys():
+        if weakest != '' and capacities[key] < capacities[weakest]:
+            weakest = key
+        elif weakest == '':
+            weakest = key
+        
+    # find rotations of weakest element
+    if weakest == ElementType.Joint:
+        if subassembly.node_type in (NodeType.External, NodeType.TopExternal):
+            rotation_capacities = EXTERNAL_NODE_ROTATION_CAPACITIES
+        else:
+            rotation_capacities = INTERNAL_NODE_ROTATION_CAPACITIES
+    elif weakest == ElementType.Beam:
+        rotation_capacities = (
+            min(
+                subassembly.left_beam.moment_rotation(counter_direction)['rotation'][0] if subassembly.left_beam is not None else 1,
+                subassembly.right_beam.moment_rotation(direction)['rotation'][0] if subassembly.right_beam is not None else 1
+            ),
+            min(
+                subassembly.left_beam.moment_rotation(counter_direction)['rotation'][-1] if subassembly.left_beam is not None else 1,
+                subassembly.right_beam.moment_rotation(direction)['rotation'][-1] if subassembly.right_beam is not None else 1
+            ),
+        )
+    elif weakest == ElementType.Column:
+        rotation_capacities = (
+            min(
+                subassembly.above_column.moment_rotation(counter_direction,axial=column_capacity_axial)['rotation'][0] if subassembly.above_column is not None else 1,
+                subassembly.below_column.moment_rotation(direction,axial=column_capacity_axial)['rotation'][0]
+            ),
+            min(
+                subassembly.above_column.moment_rotation(counter_direction,axial=column_capacity_axial)['rotation'][-1] if subassembly.above_column is not None else 1,
+                subassembly.below_column.moment_rotation(direction,axial=column_capacity_axial)['rotation'][-1]
+            ),
+        )
+    else:
+        raise AssertionError('We have no idea why it failed, but the subassembly could not find the weakest element')
+        
+    return{
+        'beam_equivalent' : 1/conversion_factor * capacities[weakest],
+        'rotation_yielding' : rotation_capacities[0],
+        'rotation_ultimate' : rotation_capacities[-1]
+    }
+
+@cache
+def single_hierarchy(subassembly: Subassembly, direction: Direction = Direction.Positive):
+    """
+    Returns the hierarchy of the subassembly considering the elements as single and 
+    not considering the subassembly as hyperstatic
+
+    :params subassembly: subassembly object
+
+    :params direction: direction of sway (Positive is from left to right) 
+    """
+    if subassembly.node_type is NodeType.Base:
+            raise NotImplementedError
+        
+    counter_direction = Direction.Negative if direction == Direction.Positive else Direction.Positive
+        
+    columns_number = (subassembly.above_column is not None) + 1
+    beam_number = (subassembly.left_beam is not None) + (subassembly.right_beam is not None)
+    conversion_factor = beam_number / columns_number
+
+    capacities = dict()
+
+    delta_axial_curve = lambda axial: subassembly.delta_axial_moment(axial, direction)
+
+    # Left Beam
+    if subassembly.left_beam is not None:
+        left_beam_capacity_curve = lambda axial: (
+            conversion_factor * subassembly.left_beam.moment_rotation(counter_direction)['moment'][-1]
+        )
+        left_beam_capacity_axial = analytical_intersection(
+            subassembly.axial, 
+            left_beam_capacity_curve, 
+            delta_axial_curve
+        )
+        capacities[ElementType.LeftBeam] = delta_axial_curve(left_beam_capacity_axial)
+
+    # Right Beam
+    if subassembly.right_beam is not None:
+        right_beam_capacity_curve = lambda axial: (
+            conversion_factor * subassembly.right_beam.moment_rotation(direction)['moment'][-1]
+        )
+        right_beam_capacity_axial = analytical_intersection(
+            subassembly.axial, 
+            right_beam_capacity_curve, 
+            delta_axial_curve
+        )
+        capacities[ElementType.RightBeam] = delta_axial_curve(right_beam_capacity_axial)
+
+    # Above Column
+    if subassembly.above_column is not None:
+        above_column_capacity_curve = lambda axial: (
+            subassembly.above_column.get_section().domain_MN(axial)
+        )
+        above_column_capacity_axial = analytical_intersection(
+            subassembly.axial, 
+            above_column_capacity_curve, 
+            delta_axial_curve
+        )
+        capacities[ElementType.AboveColumn] = delta_axial_curve(above_column_capacity_axial)
+
+    # Below Column
+    below_column_capacity_curve = lambda axial: (
+        subassembly.below_column.get_section().domain_MN(axial)
+    )
+    below_column_capacity_axial = analytical_intersection(
+        subassembly.axial, 
+        below_column_capacity_curve, 
+        delta_axial_curve
+    )
+    capacities[ElementType.BelowColumn] = delta_axial_curve(below_column_capacity_axial)
+
+    # Joint
+    joint_capacity_curve = lambda axial: subassembly.domain_MN(axial)
+    joint_capacity_axial = analytical_intersection(
+        subassembly.axial, 
+        joint_capacity_curve, 
+        delta_axial_curve
+    )
+    capacities[ElementType.Joint] = delta_axial_curve(joint_capacity_axial)
+
+    # Find weakest
+    weakest = ''
+    for key in capacities.keys():
+        if weakest != '' and capacities[key] < capacities[weakest]:
+            weakest = key
+        elif weakest == '':
+            weakest = key
+        
+    # find rotations of weakest element
+    if weakest == ElementType.Joint:
+        if subassembly.node_type in (NodeType.External, NodeType.TopExternal):
+            rotation_capacities = EXTERNAL_NODE_ROTATION_CAPACITIES
+        else:
+            rotation_capacities = INTERNAL_NODE_ROTATION_CAPACITIES
+    elif weakest == ElementType.LeftBeam:
+        rotation_capacities = (
+            subassembly.left_beam.moment_rotation(counter_direction)['rotation'][0],
+            subassembly.left_beam.moment_rotation(counter_direction)['rotation'][-1]
+        )
+    elif weakest == ElementType.RightBeam:
+        rotation_capacities = (
+            subassembly.right_beam.moment_rotation(direction)['rotation'][0],
+            subassembly.right_beam.moment_rotation(direction)['rotation'][-1]
+        )
+    elif weakest == ElementType.AboveColumn:
+        rotation_capacities = (
+            subassembly.above_column.moment_rotation(counter_direction,axial=above_column_capacity_axial)['rotation'][0],
+            subassembly.above_column.moment_rotation(counter_direction,axial=above_column_capacity_axial)['rotation'][-1],
+        )
+    elif weakest == ElementType.BelowColumn:
+        rotation_capacities = (
+            subassembly.below_column.moment_rotation(direction,axial=below_column_capacity_axial)['rotation'][0],
+            subassembly.below_column.moment_rotation(direction,axial=below_column_capacity_axial)['rotation'][-1],
+        )
+    else:
+        raise AssertionError('We have no idea why it failed, but the subassembly could not find the weakest element')
+        
+    return{
+        'beam_equivalent' : 1/conversion_factor * capacities[weakest],
+        'rotation_yielding' : rotation_capacities[0],
+        'rotation_ultimate' : rotation_capacities[-1]
+    }
