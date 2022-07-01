@@ -4,7 +4,7 @@ import math
 from typing import List, Optional
 
 from model.enums import Direction, ElementType, NodeType
-from model.global_constants import EXTERNAL_NODE_ROTATION_CAPACITIES, INTERNAL_NODE_ROTATION_CAPACITIES, NODES_KJ_VALUES
+from model.global_constants import EXTERNAL_NODE_ROTATION_CAPACITIES, INTERNAL_NODE_COMPRESSION_K, INTERNAL_NODE_ROTATION_CAPACITIES, NODES_KJ_VALUES
 from src.elements import Element
 from src.frame import RegularFrame
 from src.utils import analytical_intersection
@@ -101,7 +101,7 @@ class Subassembly:
         tensile_strength_MPa = self.kj * math.sqrt(self.below_column.get_section().get_concrete().fc * 10**-3)
 
         try:
-            return (
+            tension_capacity = (
                 0.85 * node_area 
                 * tensile_strength_MPa * 10**3
                 * math.sqrt(1 + axial * 10**-3 / (node_area * tensile_strength_MPa)) 
@@ -109,6 +109,24 @@ class Subassembly:
             )
         except ValueError:
             return 0
+
+        if self.node_type == NodeType.Internal:
+            compression_strength_MPa = INTERNAL_NODE_COMPRESSION_K * self.below_column.get_section().get_concrete().fc * 10**-3
+            try:
+                compression_capacity = (
+                    0.85 * node_area 
+                    * compression_strength_MPa * 10**3
+                    * math.sqrt(1 - axial * 10**-3 / (node_area * compression_strength_MPa)) 
+                    * self.__shear_moment_conversion_factor()
+                )
+                return min(compression_capacity, tension_capacity)
+            except ValueError:
+                return 0
+            
+        return tension_capacity
+
+
+        
 
     def delta_axial_moment(self, axial: float, direction: Direction = Direction.Positive) -> List[float]: 
         """

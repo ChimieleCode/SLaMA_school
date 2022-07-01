@@ -1,0 +1,2 @@
+from .hazard_spectra import SeismicHazard
+from .code_NTC2018_spectra import NTC2018SeismicHazard

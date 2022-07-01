@@ -1,11 +1,13 @@
 from model.enums import Direction
+from model.global_constants import G
 from src.frame.regular_frame import RegularFrame
 from src.subassembly import SubassemblyFactory
+from src.capacity.capacity import Capacity
 
 def column_sidesway(
     sub_factory: SubassemblyFactory, 
     frame: RegularFrame, 
-    direction: Direction=Direction.Positive) -> dict:
+    direction: Direction=Direction.Positive) -> Capacity:
     """
     Computes the column sidesway of a frame
     
@@ -44,11 +46,16 @@ def column_sidesway(
         for column_moment_rotation in column_moment_rotations
     )
     H_eff = 0.5 * frame.get_heights()[-1]
-    return {
+    
+    capacity = {
+        'name' : 'Column Sidesway',
         'base_shear' : overturning_moment / H_eff,
+        'acc_capacity' : overturning_moment / H_eff / frame.get_effective_mass() / G,
         'yielding' : yielding_rotation * sub_factory.get_subassembly(0).above_column.get_element_lenght(),
         'ultimate' : ultimate_rotation * sub_factory.get_subassembly(0).above_column.get_element_lenght()
     }
+
+    return Capacity(**capacity)
 
 
 

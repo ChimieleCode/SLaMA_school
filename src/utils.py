@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Callable, List
+from typing import List
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import fsolve

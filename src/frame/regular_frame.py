@@ -62,6 +62,17 @@ class RegularFrame(Graph):
     
     @property
     @cache
+    def forces_effective_height(self):
+        """
+        Returns the Heff of the force distribution
+        """
+        return sum(
+            force * height 
+            for force, height in zip(self.floor_forces_distribution, self.__heights)
+            )
+
+    @property
+    @cache
     def __delta_axial_ratios(self) -> dict:
         """
         Computes the delta axial ratios for all the external nodes
@@ -227,6 +238,9 @@ class RegularFrame(Graph):
         Returns the heights of every floor
         """
         return self.__lengths
+
+    def get_effective_mass(self) -> float:
+        return 0.85 * sum(self.__masses)
 
     def __str__(self) -> str:
         return f"""

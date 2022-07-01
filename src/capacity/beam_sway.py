@@ -1,3 +1,5 @@
+from model.global_constants import G
+from src.capacity.capacity import Capacity
 from model.enums import Direction
 from src.frame.regular_frame import RegularFrame
 from src.subassembly import SubassemblyFactory
@@ -8,7 +10,7 @@ import numpy as np
 def beam_sidesway(
     sub_factory: SubassemblyFactory, 
     frame: RegularFrame, 
-    direction: Direction=Direction.Positive) -> dict:
+    direction: Direction=Direction.Positive) -> Capacity:
     """
     Computes the beam sidesway of a frame
 
@@ -86,17 +88,19 @@ def beam_sidesway(
                 yielding_rotations.append(moment_rotation['rotation'][0])
                 ultimate_rotations.append(moment_rotation['rotation'][-1])
 
-    H_eff = 2/3 * frame.get_heights()[-1]
     base_delta_axials = [sum(delta_axial_vertical) for delta_axial_vertical in delta_axials]
     overturning_moment = direction * sum(
             delta_axial * length 
             for delta_axial, length in zip(base_delta_axials, frame.get_lengths())
         ) + sum(column_moment_capacity)
     
-    return {
-        'base_shear' : overturning_moment / H_eff,
-        'yielding' : min(yielding_rotations) * H_eff,
-        'ultimate' : min(ultimate_rotations) * H_eff
+    capacity = {
+        'name' : 'Beam Sidesway',
+        'base_shear' : overturning_moment / frame.forces_effective_height,
+        'acc_capacity' : overturning_moment / frame.forces_effective_height / frame.get_effective_mass() / G,
+        'yielding' : min(yielding_rotations) * frame.forces_effective_height,
+        'ultimate' : min(ultimate_rotations) * frame.forces_effective_height
     }
+    return Capacity(**capacity)
 
 

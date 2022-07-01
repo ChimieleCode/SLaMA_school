@@ -23,8 +23,11 @@ class Graph:
         self.__nodes = range(node_count)
         self.__adj_list = {node: set() for node in self.__nodes}
     
-    def get_nodes(self):
+    def get_nodes(self) -> range:
         return self.__nodes
+
+    def get_node_count(self) -> int:
+        return self.__node_count
 
     def add_node(self) -> int:
         """
