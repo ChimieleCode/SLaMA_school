@@ -3,8 +3,10 @@ from typing import List
 from src.hazard.hazard_spectra import SeismicHazard
 from model.enums import SoilCategory, TopographicCategory
 from model.validation import NTC2018HazardInput
-from model.global_constants import G, PI
 from functools import cache
+
+# Usefull constants
+G = 9.81
 
 class NTC2018SeismicHazard(SeismicHazard):
     """
@@ -161,7 +163,7 @@ class NTC2018SeismicHazard(SeismicHazard):
         
         :params scale_factor: the scale factor for the spectra
         """
-        return G * period**2 / (4 * PI**2) * self.get_spectral_acceleration(period, damping, scale_factor)
+        return G * period**2 / (4 * math.pi**2) * self.get_spectral_acceleration(period, damping, scale_factor)
 
     @cache
     def periods_array(self, max_period: float = 4., npoints: int = 20) -> List[float]:

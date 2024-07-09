@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import model.config as config
 from functools import cache
 from typing import List
 
@@ -8,6 +9,11 @@ from model.enums import Direction, SectionType
 from src.concrete import Concrete
 from src.steel.steel import Steel  
 from src.sections.section import Section
+from src.utils import import_configuration
+
+# Import config data
+cfg : config.MNINTConfig
+cfg = import_configuration(config.CONFIG_PATH, object_hook=config.MNINTConfig)
 
 class BasicSection(Section):
 
@@ -15,7 +21,7 @@ class BasicSection(Section):
                  section_data: BasicSectionInput, 
                  concrete: Concrete, 
                  steel: Steel,
-                 section_type: SectionType)-> None:
+                 section_type: SectionType) -> None:
         """
         Defines an object that contains section data
         """
@@ -28,21 +34,25 @@ class BasicSection(Section):
         """
         Computes the yielding point and ultimate point of moment curvature
         """
-        return analytic_coment_curvature(
+        algs = {
+            config.MomentCurvatureAlg.StressBlock : analytic_moment_curvature
+        }
+        return algs[cfg.element_settings.moment_curvature](
             section_data=self.__section_data,
             concrete=self.__concrete,
             steel=self.__steel,
             direction=direction,
             axial=round(axial, ndigits=2)
-            )
+        )
     
-    # def domain_MN(self, axial: float) -> float:
-    #     print('not coded yet')
     def domain_MN(self, axial: float, direction: Direction = Direction.Positive) -> float:
         """
         Computes the MN domain of the section
         """
-        domain = four_points_MN_domain(
+        algs = {
+            config.DomainMNAlg.FourPoints : four_points_MN_domain
+        }
+        domain = algs[cfg.element_settings.domain_mn](
             section_data=self.__section_data,
             concrete=self.__concrete,
             steel=self.__steel,
@@ -63,21 +73,28 @@ class BasicSection(Section):
         """
         Computes the shear capacity of the section
         """
-        return shear_NZSEE2017(
+        algs = {
+            config.ShearFormula.NTC2018 : NotImplemented,
+            config.ShearFormula.NZSEE2017 : shear_NZSEE2017
+        }
+        return algs[cfg.element_settings.shear_formulation](
             section_data=self.__section_data,
             concrete=self.__concrete,
             steel=self.__steel,
             L=round(L, ndigits=2),
             axial=round(axial, ndigits=2)
-            )
+        )
     
     @cache
     def plastic_hinge_length(self, L: float) -> float:
+        """ 
+        Formulation from C5 NZSEE2017 
+        """
         k_factor = min(
             0.08,
             0.2*(self.__steel.fu/self.__steel.fy - 1)
         )
-        strain_penetration = 0.022 * self.__steel.fy * 10**-3 * self.__section_data.eq_bar_diameter
+        strain_penetration = 0.022 * self.__steel.fy * self.__section_data.eq_bar_diameter * 10**-3
         return (k_factor * L/2 + strain_penetration)
     
     def get_height(self) -> float:
@@ -138,8 +155,8 @@ class BasicSection(Section):
 # -----------------------------------------------------
 
 @cache
-def analytic_coment_curvature(section_data: BasicSectionInput, 
-                              concrete: Concrete, 
+def analytic_moment_curvature(section_data: BasicSectionInput,
+                              concrete: Concrete,
                               steel: Steel,
                               direction: Direction = Direction.Positive,
                               axial: float = 0) -> dict:

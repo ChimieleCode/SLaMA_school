@@ -1,12 +1,11 @@
 from pathlib import Path
-from re import T
 from typing import Any, List
 import matplotlib.pyplot as plt
 
-from src.capacity.capacity import Capacity
+from src.capacity.capacity import FrameCapacity
 from src.hazard import SeismicHazard
 
-def plot_base_shear(capacity_curves: List[Capacity],
+def plot_base_shear(capacity_curves: List[FrameCapacity],
                     colors: List[Any] = list(),
                     save_path: Path = None) -> None:
     """
@@ -45,7 +44,7 @@ def plot_base_shear(capacity_curves: List[Capacity],
     plt.clf()
 
 
-def plot_ADRS(capacity: Capacity, 
+def plot_ADRS(capacity: FrameCapacity, 
               SLV_spectra: SeismicHazard, 
               IS_V: float, 
               SLD_spectra: SeismicHazard = None, 

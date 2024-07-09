@@ -26,7 +26,7 @@ def get_ISV_risk_class(IS_V: float) -> RiskClass:
 
 def get_PAM_risk_class(PAM: float) -> RiskClass:
     """
-    Returns the risk class given IS-V
+    Returns the risk class given PAM
     """
     if PAM <= 0.5 :
         return RiskClass.Ap
@@ -50,6 +50,37 @@ def get_PAM_risk_class(PAM: float) -> RiskClass:
         return RiskClass.F
     
     return RiskClass.G
+
+
+# def get_PAM_risk_class(PAM: float) -> RiskClass:
+#     """
+#     Returns the risk class given IS-V
+#     """
+#     fields = (
+#         0.5,
+#         1.,
+#         1.5,
+#         2.5,
+#         3.5,
+#         4.5,
+#         7.5
+#     )
+#     classe = (
+#         RiskClass.Ap,
+#         RiskClass.A,
+#         RiskClass.B,
+#         RiskClass.C,
+#         RiskClass.D,
+#         RiskClass.E,
+#         RiskClass.F,
+#         RiskClass.G
+#     )
+
+#     for i, value in enumerate(fields):
+#         if PAM <= value:
+#             return classe[i]
+    
+#     return classe[-1]
 
 
 def get_risk_class(IS_V: float, PAM: float) -> RiskClass:

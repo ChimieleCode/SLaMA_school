@@ -4,7 +4,6 @@ from src.elements.element import Element
 from src.sections.section import Section
 from src.utils import intersection
 
-
 class BasicElement(Element):
     """
     An element object containing data of the given structural member
@@ -76,9 +75,9 @@ class BasicElement(Element):
         if shear_capacity_envelope['moment'][0] <= moment_rotation['moment'][0]:
             # shear failure in elastic loading
             return {
-                'moment' : (shear_capacity_envelope['moment'],) * 2,
+                'moment' : (shear_capacity_envelope['moment'][0],) * 2,
                 'rotation' : (
-                    shear_capacity_envelope['moment'] * moment_rotation['rotation'][0] / moment_rotation['moment'][0]
+                    shear_capacity_envelope['moment'][0] * moment_rotation['rotation'][0] / moment_rotation['moment'][0],
                 ) * 2,
                 'failure' : FailureType.ShearFragile
             }
