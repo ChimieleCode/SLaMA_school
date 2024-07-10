@@ -13,26 +13,28 @@ from src.elements import BasicElement
 from src.subassembly import SubassemblyFactory
 from src.capacity import column_sidesway, beam_sidesway, mixed_sidesway, mixed_sidesway_low_yielding
 
+from pathlib import Path
+
 def main():
     """
     Main process
     """
     # Import frame data
-    frame_dct = import_from_json('.\Inputs\Frame.json')
+    frame_dct = import_from_json(Path('./Inputs/Frame.json'))
     # Validate frame data
     validated_frame = Regular2DFrameInput(
         **frame_dct
     )
 
     # Import section data
-    sections_dct = import_from_json('.\Inputs\Sections.json')
+    sections_dct = import_from_json(Path('./Inputs/Sections.json'))
     # validate section data
     validated_sections = BasicSectionCollectionInput(
         **sections_dct
     )
 
     # Import material data
-    materials_dct = import_from_json('.\Inputs\Materials.json')
+    materials_dct = import_from_json(Path('./Inputs/Materials.json'))
     # Validate material data
     validated_materials = SimpleMaterialInput(
         **materials_dct
@@ -104,7 +106,7 @@ def main():
     #     **hazard_dct_SLV
     # )
     # hazard_spectra_SLV = NTC2018SeismicHazard(validated_hazard_input_SLV)
-    
+
     # hazard_dct_SLD = import_from_json('.\Inputs\Hazard_SLD.json')
     # validated_hazard_input_SLD = NTC2018HazardInput(
     #     **hazard_dct_SLD
