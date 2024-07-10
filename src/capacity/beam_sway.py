@@ -1,5 +1,4 @@
-from model.global_constants import G
-from src.capacity.capacity import Capacity
+from model.data_models import FrameCapacity
 from model.enums import Direction
 from src.frame.regular_frame import RegularFrame
 from src.subassembly import SubassemblyFactory
@@ -7,18 +6,23 @@ from src.subassembly import SubassemblyFactory
 from itertools import product
 import numpy as np
 
+# constants
+G = 9.81
+
 def beam_sidesway(
     sub_factory: SubassemblyFactory, 
     frame: RegularFrame, 
-    direction: Direction=Direction.Positive) -> Capacity:
+    direction: Direction=Direction.Positive) -> FrameCapacity:
     """
     Computes the beam sidesway of a frame
 
-    :params sub_factory: Subasssembly factory of a given frame
+    Args:
+        sub_factory (SubassemblyFactory): Subassemblly factory of the given frame
+        frame (RegularFrame): frame shared by subassembly_factory
+        direction (Direction, optional): Direction of push. Defaults to Direction.Positive.
 
-    :params frame: the frame data
-
-    :params direction: positive is considered left to right
+    Returns:
+        FrameCapacity: capacity of the frame
     """
     # Columns
     column_moment_capacity = list()
@@ -96,11 +100,13 @@ def beam_sidesway(
     
     capacity = {
         'name' : 'Beam Sidesway',
-        'base_shear' : overturning_moment / frame.forces_effective_height,
-        'acc_capacity' : overturning_moment / frame.forces_effective_height / frame.get_effective_mass() / G,
-        'yielding' : min(yielding_rotations) * frame.forces_effective_height,
-        'ultimate' : min(ultimate_rotations) * frame.forces_effective_height
+        'mass' : frame.get_effective_mass(),
+        'base_shear' : [overturning_moment / frame.forces_effective_height] * 2,
+        'disp' : [
+            min(yielding_rotations) * frame.forces_effective_height,
+            min(ultimate_rotations) * frame.forces_effective_height
+        ]
     }
-    return Capacity(**capacity)
+    return FrameCapacity(**capacity)
 
 

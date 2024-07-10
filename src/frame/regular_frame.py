@@ -240,7 +240,11 @@ class RegularFrame(Graph):
         return self.__lengths
 
     def get_effective_mass(self) -> float:
-        return 0.85 * sum(self.__masses)
+        disp = np.arange(0, self.floors) + 1
+        mass_disp = np.dot(np.array(self.__masses), disp)
+        mass_disp_sq = np.dot(np.array(self.__masses), disp**2)
+        return mass_disp**2 / mass_disp_sq
+        # return 0.8 * sum(self.__masses)
 
     def __str__(self) -> str:
         return f"""

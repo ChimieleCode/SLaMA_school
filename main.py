@@ -1,26 +1,33 @@
-from model.enums import Direction
-from src.plotting import plot_PAM, plot_base_shear, plot_ADRS
-from src.performance import compute_ISV, compute_PAM, get_risk_class
-from src.scripts import convert_to_section_collection
-from src.utils import export_to_json, import_from_json
-from src.hazard import NTC2018SeismicHazard
-from model.validation import Regular2DFrameInput, BasicSectionCollectionInput, SimpleMaterialInput, NTC2018HazardInput
-from src.steel.steel import Steel   # does not see the package
+from pathlib import Path
+
+from model.enums import Direction, ElementType
+from model.validation import (Regular2DFrameInput, BasicSectionCollectionInput,
+                              SimpleMaterialInput, NTC2018HazardInput)
+from src.steel import Steel   # does not see the package
 from src.concrete import Concrete
 from src.sections import BasicSection
 from src.frame import RegularFrameBuilder
 from src.elements import BasicElement
 from src.subassembly import SubassemblyFactory
-from src.capacity import column_sidesway, beam_sidesway, mixed_sidesway, mixed_sidesway_low_yielding
+from src.hazard import NTC2018SeismicHazard
+from src.frame.regular_frame import RegularFrame
 
-from pathlib import Path
+from src.scripts import convert_to_section_collection
+from src.utils import export_to_json, import_from_json
+from src.performance import compute_ISV, compute_ISD
+from src.capacity import (column_sidesway, beam_sidesway, mixed_sidesway,
+                          mixed_sidesway_sub_stiff, damaged_sidesway_sub_stiff, damaged_mixed_sidesway)
+
 
 def main():
     """
     Main process
     """
+    # -o-o-o-o-o- IMPORT AND VALIDATION -o-o-o-o-o-
+
     # Import frame data
     frame_dct = import_from_json(Path('./Inputs/Frame.json'))
+    # print(frame_dct)
     # Validate frame data
     validated_frame = Regular2DFrameInput(
         **frame_dct
@@ -39,6 +46,8 @@ def main():
     validated_materials = SimpleMaterialInput(
         **materials_dct
     )
+
+    # -o-o-o-o-o- MODEL BUILDING -o-o-o-o-o-
 
     # Instansiate material objects
     steel = Steel(**validated_materials.steel.__dict__)
@@ -64,76 +73,196 @@ def main():
     # Get subassemblies
     subassemly_factory = SubassemblyFactory(frame=frame)
 
+    # -o-o-o-o-o- COMPUTE CAPACIIES -o-o-o-o-o-
+
+    # print(frame.get_effective_mass())
+
     # Compute capacity
-    # beam_sway_capacity = beam_sidesway(
-    #     sub_factory=subassemly_factory,
-    #     frame=frame
-    # )
-    # column_sway_capacity = column_sidesway(
-    #     sub_factory=subassemly_factory,
-    #     frame=frame
-    # )
-    mixed_sway_capacity = mixed_sidesway(
+    beam_SLaMA = beam_sidesway(
         sub_factory=subassemly_factory,
         frame=frame
     )
-    # mixed_sway_capacity_low = mixed_sidesway_low_yielding(
+    # # print(beam_SLaMA)
+    column_SLaMA = column_sidesway(
+        sub_factory=subassemly_factory,
+        frame=frame
+    )
+    # print(column_SLaMA)
+    classic_SLaMA = mixed_sidesway(
+        sub_factory=subassemly_factory,
+        frame=frame
+    )
+    # print(classic_SLaMA)
+    # modified_SLaMA = mixed_sidesway_sub_stiff(
     #     sub_factory=subassemly_factory,
     #     frame=frame
     # )
 
-    # # Export results
+    # -o-o-o-o-o- DAMAGE STATES -o-o-o-o-o-
+
+    # Marins & Silva
+    # damage_states_classic = {
+    #     'DS1': 0.75*classic_SLaMA.disp[0]/frame.forces_effective_height,
+    #     'DS2': (0.5*classic_SLaMA.disp[0] + 0.33*classic_SLaMA.disp[-1])/frame.forces_effective_height,
+    #     'DS3': (0.25*classic_SLaMA.disp[0] + 0.67*classic_SLaMA.disp[-1])/frame.forces_effective_height
+    # }
+    # damage_states_modified = {
+    #     'DS1': 0.75*modified_SLaMA.disp[0]/frame.forces_effective_height,
+    #     'DS2': (0.5*modified_SLaMA.disp[0] + 0.33*modified_SLaMA.disp[-1])/frame.forces_effective_height,
+    #     'DS3': (0.25*modified_SLaMA.disp[0] + 0.67*modified_SLaMA.disp[-1])/frame.forces_effective_height
+    # }
+
+    # # -o-o-o-o-o- DAMAGED SLAMAS -o-o-o-o-o-
+#
+    # # Classic
+    # damaged_SLaMAs_classic = {}
+    # for key, damage_state in damage_states_classic.items():
+    #     damaged_SLaMAs_classic[key] = damaged_mixed_sidesway(
+    #         sub_factory=subassemly_factory,
+    #         frame=frame,
+    #         drift=damage_state
+    #     )
     # export_to_json(
-    #     filepath='.\Outputs\\beam_sway.json',
-    #     data=beam_sway_capacity.__dict__
+    #     filepath=Path('./Outputs/capacities_classic.json'),
+    #     data={
+    #         'DS_0': classic_SLaMA.__dict__,
+    #         'DS_1': damaged_SLaMAs_classic['DS1'].__dict__,
+    #         'DS_2': damaged_SLaMAs_classic['DS2'].__dict__,
+    #         'DS_3': damaged_SLaMAs_classic['DS3'].__dict__,
+    #     }
     # )
+#
+    # # Corrected
+    # damaged_SLaMAs_modified = {}
+    # for key, damage_state in damage_states_modified.items():
+    #     damaged_SLaMAs_modified[key] = damaged_sidesway_sub_stiff(
+    #         sub_factory=subassemly_factory,
+    #         frame=frame,
+    #         drift=damage_state
+    #     )
     # export_to_json(
-    #     filepath='.\Outputs\\column_sway.json',
-    #     data=column_sway_capacity.__dict__
+    #     filepath=Path('./Outputs/capacities_modified.json'),
+    #     data={
+    #         'DS_0': modified_SLaMA.__dict__,
+    #         'DS_1': damaged_SLaMAs_modified['DS1'].__dict__,
+    #         'DS_2': damaged_SLaMAs_modified['DS2'].__dict__,
+    #         'DS_3': damaged_SLaMAs_modified['DS3'].__dict__,
+    #     }
     # )
+
+    # Export sub data for plot
     # export_to_json(
-    #     filepath='.\Outputs\\mixed_sway.json',
-    #     data=mixed_sway_capacity.__dict__
-    # )
-    # export_to_json(
-    #     filepath='.\Outputs\\mixed_sway_low.json',
-    #     data=mixed_sway_capacity_low
+    #     filepath=Path('Outputs\subassembleys.json'),
+    #     data=get_subassemby_hierarchy(sub_factory=subassemly_factory, frame=frame)
     # )
 
-    # # Performance
-    # hazard_dct_SLV = import_from_json('.\Inputs\Hazard_SLV.json')
-    # validated_hazard_input_SLV = NTC2018HazardInput(
-    #     **hazard_dct_SLV
+    # # -o-o-o-o-o- PERFORMANCE EVALUATION -o-o-o-o-o-
+    #
+    # # Spectras
+    # SLV_spectra_data = NTC2018HazardInput(
+    #     **import_from_json(Path('Inputs/Hazard_SLV.json'))
     # )
-    # hazard_spectra_SLV = NTC2018SeismicHazard(validated_hazard_input_SLV)
+    # SLV_spectra = NTC2018SeismicHazard(SLV_spectra_data)
+    #
+    # SLD_spectra_data = NTC2018HazardInput(
+    #     **import_from_json(Path('Inputs/Hazard_SLD.json'))
+    # )
+    # SLD_spectra =   NTC2018SeismicHazard(SLD_spectra_data)
+    #
+    # IS_Vs = dict()
+    # IS_Ds = dict()
+    # IS_Vs['DS0'] = compute_ISV(capacity=modified_SLaMA, hazard=SLV_spectra)
+    # IS_Ds['DS0'] = compute_ISD(capacity=modified_SLaMA, hazard=SLV_spectra)
+    # for key, capacity in damaged_SLaMAs.items():
+    #
+    #     IS_Vs[key] = compute_ISV(capacity=capacity, hazard=SLV_spectra)
+    #     IS_Ds[key] = compute_ISD(capacity=capacity, hazard=SLD_spectra)
 
-    # hazard_dct_SLD = import_from_json('.\Inputs\Hazard_SLD.json')
-    # validated_hazard_input_SLD = NTC2018HazardInput(
-    #     **hazard_dct_SLD
-    # )
-    # hazard_spectra_SLD = NTC2018SeismicHazard(validated_hazard_input_SLD)
-
-    # new_building_standard = compute_ISV(
-    #     capacity=mixed_sway_capacity,
-    #     hazard=hazard_spectra_SLV
-    # )
-    # expected_annual_loss = compute_PAM(
-    #     capacity=mixed_sway_capacity,
-    #     hazard=[hazard_spectra_SLD, hazard_spectra_SLV]
-    # )
-    # plot_PAM(
-    #     expected_annual_loss,
-    #     'r',
-    #     '.\Graphs\PAM.png'
-    # )
-    # plot_ADRS(
-    #     mixed_sway_capacity,
-    #     hazard_spectra_SLV,
-    #     new_building_standard,
-    #     save_path='.\Graphs\ADRS.png'
-    # )
+    # print(IS_Vs)
+    # print(IS_Ds)
 
 
+def get_subassemby_hierarchy(sub_factory: SubassemblyFactory, frame: RegularFrame) -> dict[int: ElementType]:
+    """
+    Gets the subassembly mechcanism data
+
+    Args:
+        sub_factory (SubassemblyFactory): subassembly factory
+        frame (RegularFrame): frame object
+
+    Returns:
+        dict[int: ElementType]: list of sub critical elements
+    """
+    mechanisms = {}
+
+    for sub_id in range(frame.verticals, frame.get_node_count()):
+        subassembley = sub_factory.get_subassembly(sub_id)
+        mechanisms[sub_id] = subassembley.get_hierarchy()
+
+    return mechanisms
+
+
+def export_subassemblies_as_csv(subassemly_factory, frame):
+    import csv
+
+    subs = get_mixed_sidesway_capacities(subassemly_factory, frame)
+    header = ['sub', 'M', 'y', 'u', 'el']
+
+    data = zip(
+        range(frame.get_node_count()),
+        [sub['moment'] for sub in subs],
+        [sub['yielding'] for sub in subs],
+        [sub['ultimate'] for sub in subs],
+        [sub['element'] for sub in subs]
+    )
+
+    with open(Path('Outputs/subs.csv'), 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+
+        writer.writerow(header)
+        writer.writerows(data)
+
+
+def get_mixed_sidesway_capacities(sub_factory: SubassemblyFactory, frame: RegularFrame, direction: Direction = Direction.Positive):
+
+    sub_capacities = [0] * frame.get_node_count()
+    for vertical in range(frame.verticals):
+        subassembly_id = frame.get_node_id(
+                floor=0,
+                vertical=vertical
+            )
+        subassembly = sub_factory.get_subassembly(subassembly_id)
+
+        sub_capacities[subassembly_id] = {
+            'moment' : subassembly.above_column.moment_rotation(
+                direction=direction,
+                axial=subassembly.axial
+            )['moment'][-1],
+            'yielding' : subassembly.above_column.moment_rotation(
+                direction=direction,
+                axial=subassembly.axial
+            )['rotation'][0],
+            'ultimate' : subassembly.above_column.moment_rotation(
+                direction=direction,
+                axial=subassembly.axial
+            )['rotation'][-1],
+            'element' : ElementType.Column
+        }
+
+    # Subassemblies
+    for sub_id in range(frame.verticals, frame.get_node_count()):
+        subassembly = sub_factory.get_subassembly(
+            sub_id
+        )
+
+        sub_capacities[sub_id] = {
+            'moment' : subassembly.get_hierarchy(direction=direction)['beam_equivalent'],
+            'yielding' : subassembly.get_hierarchy(direction=direction)['rotation_yielding'],
+            'ultimate' : subassembly.get_hierarchy(direction=direction)['rotation_ultimate'],
+            'element' : subassembly.get_hierarchy(direction=direction)['element']
+        }
+
+    return sub_capacities
 
 # Profile Mode
 if __name__ == '__main__':
@@ -141,10 +270,10 @@ if __name__ == '__main__':
     import pstats
 
     with cProfile.Profile() as pr:
-        main()
+        for _ in range(100):
+            main()
 
     stats = pstats.Stats(pr)
-    stats.sort_stats(pstats.SortKey.TIME)
-    stats.print_stats()
-    # can be optimized the solution for intersection (ditch scipy and lambdas)
+    stats.sort_stats(pstats.SortKey.TIME).print_stats()
+
 

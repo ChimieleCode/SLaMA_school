@@ -1,5 +1,4 @@
 from enum import Enum, auto
-from turtle import right
 
 class NodeType(str, Enum):
     Internal    = 'internal'
@@ -52,9 +51,9 @@ class SoilCategory(str, Enum):
 
 class TopographicCategory(str, Enum):
     CatT1 = "T1"
-    CatT2 = "T1"
-    CatT3 = "T1"
-    CatT4 = "T1"
+    CatT2 = "T2"
+    CatT3 = "T3"
+    CatT4 = "T4"
 
 
 class LifeTime(int, Enum):
@@ -73,3 +72,7 @@ class RiskClass(str, Enum):
     E  = 'E'
     F  = 'F'
     G  = 'G'
+
+
+
+

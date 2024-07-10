@@ -1,8 +1,8 @@
 from src.performance.capacity_demand import compute_ISD, compute_ISV
 from src.hazard import SeismicHazard
-from src.capacity import Capacity
+from model.data_models import FrameCapacity
 
-def compute_PAM(capacity: Capacity, hazard: SeismicHazard) -> dict():
+def compute_PAM(capacity: FrameCapacity, hazard: SeismicHazard) -> dict():
     """
     Computes the PAM according to NTC2018
     """

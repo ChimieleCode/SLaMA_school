@@ -8,8 +8,8 @@ class Regular2DFrameInput(BaseModel):
     Input is validated to make sure that the defined
     frame is consistent
     """
-    H       : List[float]
     L       : List[float]
+    H       : List[float]
     m       : List[float]
     loads   : List[float]
     columns : List[List[int]]
@@ -64,3 +64,4 @@ class Regular2DFrameInput(BaseModel):
         if sum(len(floor) for floor in value) != beam_count:
             raise ValueError('number of beam tags does not match element count')
         return value
+    

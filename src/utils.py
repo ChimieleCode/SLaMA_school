@@ -1,4 +1,6 @@
 import json
+from pyparsing import Any
+import yaml
 from pathlib import Path
 from typing import List
 import numpy as np
@@ -20,6 +22,25 @@ def export_to_json(filepath: Path, data: dict) -> None:
     with open(filepath, 'w') as jsonfile:
         json.dump(data, jsonfile, ensure_ascii=False, indent=4)
 
+def import_configuration(config_path: Path, object_hook: object = None) -> Any:
+    """
+    Imports the config file and returns a dictionary if object_hook is not specified
+
+    Args:
+        config_path (Path): config.yaml Path
+        object_hook (object, optional): Dataclass structure for config information. Defaults to None.
+
+    Returns:
+        Any: config dictionary. If object hook is defined, will return an object_hook.__class__ instance
+    """
+    with open(config_path) as yamlfile:
+        config_dct = yaml.safe_load(yamlfile)
+
+    if object_hook is not None:
+        return object_hook(
+            **config_dct
+        )
+    return config_dct
 
 def analytical_intersection(
     initial_guess: float, 

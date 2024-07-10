@@ -1,0 +1,1 @@
+from .capacity import FrameCapacity

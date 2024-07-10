@@ -14,7 +14,7 @@ class Section(ABC):
         pass
 
     @abstractmethod
-    def domain_MN(self, axial: List[float]) -> List[float]:
+    def domain_MN(self, axial: float) -> List[float]:
         pass
 
     @abstractmethod
