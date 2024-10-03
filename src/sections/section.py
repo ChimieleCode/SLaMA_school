@@ -1,16 +1,40 @@
 from abc import ABC, abstractmethod
 from typing import List
+from dataclasses import dataclass
 
 from model.enums import Direction, SectionType
 from src.steel.steel import Steel
 from src.concrete.concrete import Concrete
+
+
+@dataclass
+class MomentCurvature:
+    mom_y: float    # yielding moment
+    mom_c: float    # capacity moment
+    phi_y: float    # yielding curvature
+    phi_c: float    # capacity curvature
+
+
+@dataclass
+class ShearEnvelope:
+    cap_undamaged: float    # capacity undamaged
+    cap_residual: float     # capacity residual
+    duc_undamaged: float    # ductility undamaged
+    duc_residual: float     # ductility residual
+
+
+@dataclass
+class MNDomain:
+    moment: List[float]
+    axial: List[float]
+
 
 class Section(ABC):
     """
     Abstract class for section
     """
     @abstractmethod
-    def moment_curvature(self, direction: Direction, axial: float=0.) -> dict:
+    def moment_curvature(self, direction: Direction, axial: float=0.) -> MomentCurvature:
         pass
 
     @abstractmethod
@@ -18,13 +42,13 @@ class Section(ABC):
         pass
 
     @abstractmethod
-    def shear_capacity(self, L: float, axial: float = 0.) -> dict:
+    def shear_capacity(self, L: float, axial: float = 0.) -> ShearEnvelope:
         pass
 
     @abstractmethod
     def plastic_hinge_length(self, L: float) -> float:
         pass
-    
+
     @abstractmethod
     def get_height(self) -> float:
         pass

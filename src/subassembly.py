@@ -64,9 +64,9 @@ class Subassembly:
         if self.node_type in INTERNAL_NODES:
             if self.right_beam.get_section().get_depth() != self.right_beam.get_section().get_depth():
                 raise AssertionError(
-                    """All the beams of a floor must have the same height in order to 
+                    """All the beams of a floor must have the same height in order to
                     work with this node formulaton"""
-                )            
+                )
 
     # Propriesties
 
@@ -95,41 +95,41 @@ class Subassembly:
             return NodeType.External
         else:
             return NodeType.Internal
-    
+
     @cache
     def __shear_moment_conversion_factor(self) -> float:
         """
-        Returns the conversion factor for the beam-column joint in order to b   
+        Returns the conversion factor for the beam-column joint in order to b
         express the capacity of given joint in equivalent column moment
         """
         beam_height = max(
-            self.right_beam.get_section().get_height() 
+            self.right_beam.get_section().get_height()
                 if self.right_beam is not None else 0,
-            self.left_beam.get_section().get_height() 
+            self.left_beam.get_section().get_height()
                 if self.left_beam is not None else 0
         )
         beam_depth = (
-            self.right_beam.get_section().get_depth() 
-                if self.right_beam is not None 
+            self.right_beam.get_section().get_depth()
+                if self.right_beam is not None
                 else self.left_beam.get_section().get_depth()
         )
         if self.node_type in INTERNAL_NODES:
             beam_factor = (
-                self.beam_length 
+                self.beam_length
                 - self.below_column.get_section().get_height()
             )
         else:
             beam_factor = (
-                self.beam_length 
+                self.beam_length
                 - 0.5 * self.below_column.get_section().get_height()
             )
         if self.node_type in TOP_NODES:
             column_factor = self.column_length - 0.5 * beam_height
         else:
             column_factor = 0.5 * (self.column_length - beam_height)
-        
+
         return (
-            (0.9 * column_factor * self.beam_length * beam_depth) 
+            (0.9 * column_factor * self.beam_length * beam_depth)
             / (self.column_length * beam_factor - 0.9 * self.beam_length * beam_depth)
         )
 
@@ -140,9 +140,9 @@ class Subassembly:
         """
         if self.node_type is NodeType.Base:
             return self.above_column.get_section().domain_MN(axial=axial)
-    
+
         node_area = (
-            self.below_column.get_section().get_effective_width() 
+            self.below_column.get_section().get_effective_width()
             * self.below_column.get_section().get_height()
         )
         tensile_strength_MPa = self.kj * math.sqrt(
@@ -151,9 +151,9 @@ class Subassembly:
 
         try:
             tension_capacity = (
-                0.85 * node_area 
+                0.85 * node_area
                 * tensile_strength_MPa * 10**3
-                * math.sqrt(1 + axial * 10**-3 / (node_area * tensile_strength_MPa)) 
+                * math.sqrt(1 + axial * 10**-3 / (node_area * tensile_strength_MPa))
                 * self.__shear_moment_conversion_factor()
             )
         except ValueError:
@@ -161,33 +161,33 @@ class Subassembly:
 
         if self.node_type == NodeType.Internal:
             compression_strength_MPa = (
-                cfg.nodes.compression_kj_value 
-                * self.below_column.get_section().get_concrete().fc 
+                cfg.nodes.compression_kj_value
+                * self.below_column.get_section().get_concrete().fc
                 * 10**-3
             )
             try:
                 compression_capacity = (
-                    0.85 * node_area 
+                    0.85 * node_area
                     * compression_strength_MPa * 10**3
-                    * math.sqrt(1 - axial * 10**-3 / (node_area * compression_strength_MPa)) 
+                    * math.sqrt(1 - axial * 10**-3 / (node_area * compression_strength_MPa))
                     * self.__shear_moment_conversion_factor()
                 )
                 return min(compression_capacity, tension_capacity)
             except ValueError:
                 return 0
- 
+
         return tension_capacity
 
 
-    def delta_axial_moment(self, 
-                           axial: float, 
-                           direction: Direction = Direction.Positive) -> List[float]: 
+    def delta_axial_moment(self,
+                           axial: float,
+                           direction: Direction = Direction.Positive) -> List[float]:
         """
         Returns the moment that produces the given axial load
         """
         delta_N = (
-            self.delta_axial 
-                if direction is Direction.Positive 
+            self.delta_axial
+                if direction is Direction.Positive
                 else -self.delta_axial
         )
         if delta_N == 0:
@@ -196,13 +196,13 @@ class Subassembly:
 
     def get_hierarchy(self, direction: Direction = Direction.Positive) -> dict:
         """
-        Computes the hierarchy of subassembly. 
+        Computes the hierarchy of subassembly.
             The algorithm can be chosen in config file -> sub_hierarchy
             'avg' : the hierarchy considers the average capacity for columns and beams
             'low' : the hierarchy considers every element on its own
 
         Args:
-            direction (Direction, optional): Direction of push. 
+            direction (Direction, optional): Direction of push.
                 Defaults to Direction.Positive.
 
         Returns:
@@ -217,16 +217,16 @@ class Subassembly:
             subassembly=self,
             direction=direction
         )
-    
+
     def get_stiffness(self,  direction: Direction = Direction.Positive) -> float:
         """
-        Retuns the equivalent stiffness of the subassembly. 
+        Retuns the equivalent stiffness of the subassembly.
             The algorithm can be chosen in config file -> sub_stiffness
             'avg' : weakest element works in parallel with undamaged one
             'low' : weakest element stiffness is considered for columns and beams
 
         Args:
-            direction (Direction, optional): Direction of push. 
+            direction (Direction, optional): Direction of push.
                 Defaults to Direction.Positive.
 
         Returns:
@@ -240,7 +240,7 @@ class Subassembly:
             subassembly=self,
             direction=direction
         )
-    
+
     def __hash__(self):
         return hash(
             (
@@ -307,7 +307,7 @@ class SubassemblyFactory:
                     self.__frame.get_node_vertical(node)
                 )
                 continue
-        
+
         subassembly['column_length'] = subassembly['column_length'].__round__(2)
         subassembly['beam_length'] = subassembly['beam_length'].__round__(2)
         # Gets the axial stress acting on the node
@@ -342,45 +342,45 @@ def get_node_rotations(node_type : NodeType) -> tuple:
 # Hierarchy functions
 # -------------------------------------------------------------------------------------------------
 @cache
-def total_hierarchy(subassembly: Subassembly, 
+def total_hierarchy(subassembly: Subassembly,
                       direction: Direction = Direction.Positive) -> dict:
     """
     Hyerarchy of strenght using the average capacity of columns and beams and considering lowest rotation
 
     Args:
         subassembly (Subassembly): Subassembly object
-        direction (Direction, optional): direction fo push. 
+        direction (Direction, optional): direction fo push.
             Defaults to Direction.Positive.
 
     Raises:
-        NotImplementedError: base node does noth have a hierarchy 
+        NotImplementedError: base node does noth have a hierarchy
             implementation yet (column - foundation)
         AssertionError: if weak element is neither columns, beam or joint
-        
+
     Returns:
         dict: hierarchy data
-    """         
+    """
     if subassembly.node_type is NodeType.Base:
             raise NotImplementedError
-        
+
     counter_direction = flip_direction(direction)
-        
+
     columns_number = (subassembly.above_column is not None) + 1
     beam_number = (subassembly.left_beam is not None) + (subassembly.right_beam is not None)
     conversion_factor = beam_number / columns_number
 
     beam_capacity_curve = lambda _: 1/columns_number * sum(
         [
-            subassembly.left_beam.moment_rotation(counter_direction)['moment'][-1] 
+            subassembly.left_beam.moment_rotation(counter_direction)['moment'][-1]
                 if subassembly.left_beam is not None else 0,
-            subassembly.right_beam.moment_rotation(direction)['moment'][-1] 
+            subassembly.right_beam.moment_rotation(direction)['moment'][-1]
                 if subassembly.right_beam is not None else 0
         ]
     )
 
     column_capacity_curve = lambda axial: 1/columns_number * sum(
         [
-            subassembly.above_column.get_section().domain_MN(axial) 
+            subassembly.above_column.get_section().domain_MN(axial)
                 if subassembly.above_column is not None else 0,
             subassembly.below_column.get_section().domain_MN(axial)
         ]
@@ -392,17 +392,17 @@ def total_hierarchy(subassembly: Subassembly,
 
     joint_capacity_axial = analytical_intersection(
         subassembly.axial,
-        function_1=joint_capacity_curve, 
+        function_1=joint_capacity_curve,
         function_2=delta_axial_curve
     )
     column_capacity_axial = analytical_intersection(
         subassembly.axial,
-        function_1=column_capacity_curve, 
+        function_1=column_capacity_curve,
         function_2=delta_axial_curve
     )
     beam_capacity_axial = analytical_intersection(
         subassembly.axial,
-        function_1=beam_capacity_curve, 
+        function_1=beam_capacity_curve,
         function_2=delta_axial_curve
     )
 
@@ -418,23 +418,23 @@ def total_hierarchy(subassembly: Subassembly,
             weakest = key
         elif  capacities[key] < capacities[weakest]:
             weakest = key
-    
-        
+
+
     # find rotations of weakest element
     if weakest == ElementType.Joint:
         rotation_capacities = get_node_rotations(subassembly.node_type)
     elif weakest == ElementType.Beam:
         rotation_capacities = (
             min(
-                subassembly.left_beam.moment_rotation(counter_direction)['rotation'][0] 
+                subassembly.left_beam.moment_rotation(counter_direction)['rotation'][0]
                     if subassembly.left_beam is not None else 1,
-                subassembly.right_beam.moment_rotation(direction)['rotation'][0] 
+                subassembly.right_beam.moment_rotation(direction)['rotation'][0]
                     if subassembly.right_beam is not None else 1
             ),
             min(
-                subassembly.left_beam.moment_rotation(counter_direction)['rotation'][-1] 
+                subassembly.left_beam.moment_rotation(counter_direction)['rotation'][-1]
                     if subassembly.left_beam is not None else 1,
-                subassembly.right_beam.moment_rotation(direction)['rotation'][-1] 
+                subassembly.right_beam.moment_rotation(direction)['rotation'][-1]
                     if subassembly.right_beam is not None else 1
             ),
         )
@@ -461,7 +461,7 @@ def total_hierarchy(subassembly: Subassembly,
         raise AssertionError(
             'The subassembly could not find the weakest element'
         )
-        
+
     return{
         'beam_equivalent' : 1/conversion_factor * capacities[weakest],
         'rotation_yielding' : rotation_capacities[0],
@@ -470,45 +470,45 @@ def total_hierarchy(subassembly: Subassembly,
     }
 
 @cache
-def average_hierarchy(subassembly: Subassembly, 
+def average_hierarchy(subassembly: Subassembly,
                       direction: Direction = Direction.Positive) -> dict:
     """
     Hyerarchy of strenght using the average capacity of columns and beams considering average rotation for yielding
 
     Args:
         subassembly (Subassembly): Subassembly object
-        direction (Direction, optional): direction fo push. 
+        direction (Direction, optional): direction fo push.
             Defaults to Direction.Positive.
 
     Raises:
-        NotImplementedError: base node does noth have a hierarchy 
+        NotImplementedError: base node does noth have a hierarchy
             implementation yet (column - foundation)
         AssertionError: if weak element is neither columns, beam or joint
-        
+
     Returns:
         dict: hierarchy data
-    """         
+    """
     if subassembly.node_type is NodeType.Base:
             raise NotImplementedError
-        
+
     counter_direction = flip_direction(direction)
-        
+
     columns_number = (subassembly.above_column is not None) + 1
     beam_number = (subassembly.left_beam is not None) + (subassembly.right_beam is not None)
     conversion_factor = beam_number / columns_number
 
     beam_capacity_curve = lambda _: 1/columns_number * sum(
         [
-            subassembly.left_beam.moment_rotation(counter_direction)['moment'][-1] 
+            subassembly.left_beam.moment_rotation(counter_direction)['moment'][-1]
                 if subassembly.left_beam is not None else 0,
-            subassembly.right_beam.moment_rotation(direction)['moment'][-1] 
+            subassembly.right_beam.moment_rotation(direction)['moment'][-1]
                 if subassembly.right_beam is not None else 0
         ]
     )
 
     column_capacity_curve = lambda axial: 1/columns_number * sum(
         [
-            subassembly.above_column.get_section().domain_MN(axial) 
+            subassembly.above_column.get_section().domain_MN(axial)
                 if subassembly.above_column is not None else 0,
             subassembly.below_column.get_section().domain_MN(axial)
         ]
@@ -520,17 +520,17 @@ def average_hierarchy(subassembly: Subassembly,
 
     joint_capacity_axial = analytical_intersection(
         subassembly.axial,
-        function_1=joint_capacity_curve, 
+        function_1=joint_capacity_curve,
         function_2=delta_axial_curve
     )
     column_capacity_axial = analytical_intersection(
         subassembly.axial,
-        function_1=column_capacity_curve, 
+        function_1=column_capacity_curve,
         function_2=delta_axial_curve
     )
     beam_capacity_axial = analytical_intersection(
         subassembly.axial,
-        function_1=beam_capacity_curve, 
+        function_1=beam_capacity_curve,
         function_2=delta_axial_curve
     )
 
@@ -546,8 +546,8 @@ def average_hierarchy(subassembly: Subassembly,
             weakest = key
         elif  capacities[key] < capacities[weakest]:
             weakest = key
-    
-        
+
+
     # find rotations of weakest element
     if weakest == ElementType.Joint:
         rotation_capacities = get_node_rotations(subassembly.node_type)
@@ -555,16 +555,16 @@ def average_hierarchy(subassembly: Subassembly,
         rotation_capacities = (
             sum(
                 (
-                    subassembly.left_beam.moment_rotation(counter_direction)['rotation'][0] 
+                    subassembly.left_beam.moment_rotation(counter_direction)['rotation'][0]
                         if subassembly.left_beam is not None else 0,
-                    subassembly.right_beam.moment_rotation(direction)['rotation'][0] 
+                    subassembly.right_beam.moment_rotation(direction)['rotation'][0]
                         if subassembly.right_beam is not None else 0
                 )
             ) / beam_number,
             min(
-                subassembly.left_beam.moment_rotation(counter_direction)['rotation'][-1] 
+                subassembly.left_beam.moment_rotation(counter_direction)['rotation'][-1]
                     if subassembly.left_beam is not None else 1,
-                subassembly.right_beam.moment_rotation(direction)['rotation'][-1] 
+                subassembly.right_beam.moment_rotation(direction)['rotation'][-1]
                     if subassembly.right_beam is not None else 1
             ),
         )
@@ -593,7 +593,7 @@ def average_hierarchy(subassembly: Subassembly,
         raise AssertionError(
             'The subassembly could not find the weakest element'
         )
-        
+
     return{
         'beam_equivalent' : 1/conversion_factor * capacities[weakest],
         'rotation_yielding' : rotation_capacities[0],
@@ -602,7 +602,7 @@ def average_hierarchy(subassembly: Subassembly,
     }
 
 @cache
-def single_hierarchy(subassembly: Subassembly, 
+def single_hierarchy(subassembly: Subassembly,
                      direction: Direction = Direction.Positive) -> dict:
     """
     Returns the hierarchy of subassembly considering the capacity of the single elements
@@ -613,7 +613,7 @@ def single_hierarchy(subassembly: Subassembly,
             Defaults to Direction.Positive.
 
     Raises:
-        NotImplementedError: base node does noth have a hierarchy 
+        NotImplementedError: base node does noth have a hierarchy
             implementation yet (column - foundation)
         AssertionError: if weak element is neither columns, beam or joint
 
@@ -622,9 +622,9 @@ def single_hierarchy(subassembly: Subassembly,
     """
     if subassembly.node_type is NodeType.Base:
             raise NotImplementedError
-        
+
     counter_direction = flip_direction(direction)
-        
+
     columns_number = (subassembly.above_column is not None) + 1
     beam_number = (subassembly.left_beam is not None) + (subassembly.right_beam is not None)
     conversion_factor = beam_number / columns_number
@@ -641,8 +641,8 @@ def single_hierarchy(subassembly: Subassembly,
                 )['moment'][-1]
         )
         left_beam_capacity_axial = analytical_intersection(
-            subassembly.axial, 
-            left_beam_capacity_curve, 
+            subassembly.axial,
+            left_beam_capacity_curve,
             delta_axial_curve
         )
         capacities[ElementType.LeftBeam] = delta_axial_curve(left_beam_capacity_axial)
@@ -655,8 +655,8 @@ def single_hierarchy(subassembly: Subassembly,
                 )['moment'][-1]
         )
         right_beam_capacity_axial = analytical_intersection(
-            subassembly.axial, 
-            right_beam_capacity_curve, 
+            subassembly.axial,
+            right_beam_capacity_curve,
             delta_axial_curve
         )
         capacities[ElementType.RightBeam] = delta_axial_curve(right_beam_capacity_axial)
@@ -667,8 +667,8 @@ def single_hierarchy(subassembly: Subassembly,
             subassembly.above_column.get_section().domain_MN(axial)
         )
         above_column_capacity_axial = analytical_intersection(
-            subassembly.axial, 
-            above_column_capacity_curve, 
+            subassembly.axial,
+            above_column_capacity_curve,
             delta_axial_curve
         )
         capacities[ElementType.AboveColumn] = delta_axial_curve(above_column_capacity_axial)
@@ -678,8 +678,8 @@ def single_hierarchy(subassembly: Subassembly,
         subassembly.below_column.get_section().domain_MN(axial)
     )
     below_column_capacity_axial = analytical_intersection(
-        subassembly.axial, 
-        below_column_capacity_curve, 
+        subassembly.axial,
+        below_column_capacity_curve,
         delta_axial_curve
     )
     capacities[ElementType.BelowColumn] = delta_axial_curve(below_column_capacity_axial)
@@ -687,8 +687,8 @@ def single_hierarchy(subassembly: Subassembly,
     # Joint
     joint_capacity_curve = lambda axial: subassembly.domain_MN(axial)
     joint_capacity_axial = analytical_intersection(
-        subassembly.axial, 
-        joint_capacity_curve, 
+        subassembly.axial,
+        joint_capacity_curve,
         delta_axial_curve
     )
     capacities[ElementType.Joint] = delta_axial_curve(joint_capacity_axial)
@@ -700,7 +700,7 @@ def single_hierarchy(subassembly: Subassembly,
             weakest = key
         elif capacities[key] < capacities[weakest]:
             weakest = key
-        
+
     # find rotations of weakest element
     if weakest == ElementType.Joint:
         rotation_capacities = get_node_rotations(subassembly.node_type)
@@ -736,7 +736,7 @@ def single_hierarchy(subassembly: Subassembly,
         raise AssertionError(
             'The subassembly could not find the weakest element'
         )
-    
+
     return{
         'beam_equivalent' : 1/conversion_factor * capacities[weakest],
         'rotation_yielding' : rotation_capacities[0],
@@ -749,7 +749,7 @@ def single_hierarchy(subassembly: Subassembly,
 # Stiffness functions
 # -------------------------------------------------------------------------------------------------
 @cache
-def get_total_stiffness(subassembly: Subassembly,  
+def get_total_stiffness(subassembly: Subassembly,
                         direction: Direction = Direction.Positive) -> float:
     """
     Retuns the equivalent stiffness of the subassembly
@@ -760,17 +760,17 @@ def get_total_stiffness(subassembly: Subassembly,
     counter_direction = flip_direction(direction)
 
     joint_rotation = cfg.nodes.cracking_rotation
-    
+
     # Initialize the stifness data including joint value and lower column
     stiffnesses = {
         'beam' : 0,
         'column' : (
             subassembly.below_column.moment_rotation(
-                counter_direction, 
+                counter_direction,
                 axial=subassembly.axial
                 )['moment'][0]
             / subassembly.below_column.moment_rotation(
-                counter_direction, 
+                counter_direction,
                 axial=subassembly.axial
                 )['rotation'][0]
         ),
@@ -780,14 +780,14 @@ def get_total_stiffness(subassembly: Subassembly,
     n_columns = 1
     n_beams = 0
 
-    # Updates beams' stiffness factor with left beam stiffness (if present) 
+    # Updates beams' stiffness factor with left beam stiffness (if present)
     if subassembly.left_beam is not None:
         stiffnesses['beam'] += (
             subassembly.left_beam.moment_rotation(counter_direction)['moment'][0]
             / subassembly.left_beam.moment_rotation(counter_direction)['rotation'][0]
         )
         n_beams += 1
-    # Updates beams' stiffness factor with right beam stiffness (if present) 
+    # Updates beams' stiffness factor with right beam stiffness (if present)
     if subassembly.right_beam is not None:
         stiffnesses['beam'] += (
             subassembly.right_beam.moment_rotation(direction)['moment'][0]
@@ -795,29 +795,29 @@ def get_total_stiffness(subassembly: Subassembly,
         )
         n_beams += 1
 
-    # Updates columns' stiffness factor with top column stiffness (if present) 
+    # Updates columns' stiffness factor with top column stiffness (if present)
     if subassembly.above_column is not None:
         stiffnesses['column'] += (
             subassembly.above_column.moment_rotation(
-                direction, 
+                direction,
                 axial=subassembly.axial
                 )['moment'][0]
             / subassembly.above_column.moment_rotation(
-                direction, 
+                direction,
                 axial=subassembly.axial
                 )['rotation'][0]
         )
         n_columns += 1
-    
+
     # Corrects the joint stifness accounting for the number of columns
     stiffnesses['joint'] = stiffnesses['joint'] * n_columns
-    
+
     return (sum(stiff**-1 for stiff in stiffnesses.values()))**-1 * 1/n_beams
 
 
 
 @cache
-def get_low_stiffness(subassembly: Subassembly,  
+def get_low_stiffness(subassembly: Subassembly,
                       direction: Direction = Direction.Positive) -> float:
     """
     Retuns the equivalent stiffness of the subassembly
@@ -826,7 +826,7 @@ def get_low_stiffness(subassembly: Subassembly,
         direction (Direction, optional): Direction of push. Defaults to Direction.Positive. Defaults to Direction.Positive.
     """
     counter_direction = flip_direction(direction)
-    
+
     joint_rotation = cfg.nodes.cracking_rotation
 
     stiffnesses = {
@@ -837,14 +837,14 @@ def get_low_stiffness(subassembly: Subassembly,
     n_beams = 1
     if subassembly.node_type in INTERNAL_NODES:
         n_beams += 1
-    
+
     n_columns = 1
     if subassembly.above_column is not None:
         n_columns += 1
 
     if subassembly.get_hierarchy()['element'] in BEAM_ELEMENTS:
         stiffnesses['beam'] = (
-            n_beams 
+            n_beams
             * subassembly.get_hierarchy()['beam_equivalent']
             / subassembly.get_hierarchy()['rotation_yielding']
         )
@@ -860,21 +860,21 @@ def get_low_stiffness(subassembly: Subassembly,
                 subassembly.right_beam.moment_rotation(direction)['moment'][0]
                 / subassembly.right_beam.moment_rotation(direction)['rotation'][0]
             )
-        
+
     if subassembly.get_hierarchy()['element'] in COLUMN_ELEMENTS:
         stiffnesses['column'] = (
-            n_columns 
+            n_columns
             * subassembly.get_hierarchy()['beam_equivalent']
             / subassembly.get_hierarchy()['rotation_yielding']
         )
     else:
         stiffnesses['column'] += (
             subassembly.below_column.moment_rotation(
-                counter_direction, 
+                counter_direction,
                 axial=subassembly.axial
                 )['moment'][0]
             / subassembly.below_column.moment_rotation(
-                counter_direction, 
+                counter_direction,
                 axial=subassembly.axial
                 )['rotation'][0]
         )
@@ -882,15 +882,15 @@ def get_low_stiffness(subassembly: Subassembly,
         if subassembly.above_column is not None:
             stiffnesses['column'] += (
                 subassembly.above_column.moment_rotation(
-                    direction, 
+                    direction,
                     axial=subassembly.axial
                     )['moment'][0]
                 / subassembly.above_column.moment_rotation(
-                    direction, 
+                    direction,
                     axial=subassembly.axial
                     )['rotation'][0]
             )
-    
+
     stiffnesses['joint'] = stiffnesses['joint'] * n_columns
-    
+
     return (n_beams * sum(stiff**-1 for stiff in stiffnesses.values()))**-1

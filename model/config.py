@@ -1,13 +1,13 @@
 from pydantic import BaseModel
 from typing import Any
 from enum import Enum
+from pathlib import Path
 
-CONFIG_PATH = '.\src\conf\config.yaml'
+CONFIG_PATH = Path('./src/conf/config.yaml')
 
 # -------------------------------------------------------------------------------------------------
-# Validation Enums  
+# Validation Enums
 # -------------------------------------------------------------------------------------------------
-
 class MomentCurvatureAlg(str, Enum):
     StressBlock = 'stress_block'
 
@@ -35,21 +35,21 @@ class NodeTensionValues(BaseModel):
     internal : float
     external : float
     top_internal : float
-    top_external : float 
-    base : Any 
+    top_external : float
+    base : Any
 
 class NodeRotations(BaseModel):
     yielding : float
-    ultimate : float 
+    ultimate : float
 
 class NodesConfig(BaseModel):
     tension_kj_values : NodeTensionValues
     compression_kj_value : float
-    external_node_rotation : NodeRotations 
+    external_node_rotation : NodeRotations
     internal_node_rotation : NodeRotations
     cracking_rotation : float
 
-class ElementConfig(BaseModel): 
+class ElementConfig(BaseModel):
     moment_curvature : MomentCurvatureAlg
     moment_shear_interaction : bool
     shear_formulation : ShearFormula

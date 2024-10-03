@@ -7,8 +7,8 @@ from typing import List
 from model.validation.section_model import BasicSectionInput
 from model.enums import Direction, SectionType
 from src.concrete import Concrete
-from src.steel.steel import Steel  
-from src.sections.section import Section
+from src.steel.steel import Steel
+from .section import MNDomain, Section, MomentCurvature, ShearEnvelope
 from src.utils import import_configuration
 
 # Import config data
@@ -17,9 +17,9 @@ cfg = import_configuration(config.CONFIG_PATH, object_hook=config.MNINTConfig)
 
 class BasicSection(Section):
 
-    def __init__(self, 
-                 section_data: BasicSectionInput, 
-                 concrete: Concrete, 
+    def __init__(self,
+                 section_data: BasicSectionInput,
+                 concrete: Concrete,
                  steel: Steel,
                  section_type: SectionType) -> None:
         """
@@ -30,7 +30,7 @@ class BasicSection(Section):
         self.__steel = steel
         self.__section_type = section_type
 
-    def moment_curvature(self, direction: Direction = Direction.Positive, axial: float = 0.) -> dict:
+    def moment_curvature(self, direction: Direction = Direction.Positive, axial: float = 0.) -> MomentCurvature:
         """
         Computes the yielding point and ultimate point of moment curvature
         """
@@ -44,8 +44,8 @@ class BasicSection(Section):
             direction=direction,
             axial=round(axial, ndigits=2)
         )
-    
-    def domain_MN(self, axial: float, direction: Direction = Direction.Positive) -> float:
+
+    def domain_MN(self, axial: float, direction: Direction=Direction.Positive) -> float:
         """
         Computes the MN domain of the section
         """
@@ -61,13 +61,13 @@ class BasicSection(Section):
 
         return float(
             np.interp(
-                x=axial, 
-                xp=domain['axial'],
-                fp=domain['moment'],
+                x=axial,
+                xp=domain.axial,
+                fp=domain.moment,
                 left=0,
                 right=0
-                )
             )
+        )
 
     def shear_capacity(self, L: float, axial: float = 0.) -> dict:
         """
@@ -84,19 +84,19 @@ class BasicSection(Section):
             L=round(L, ndigits=2),
             axial=round(axial, ndigits=2)
         )
-    
+
     @cache
     def plastic_hinge_length(self, L: float) -> float:
-        """ 
-        Formulation from C5 NZSEE2017 
+        """
+        Formulation from C5 NZSEE2017
         """
         k_factor = min(
             0.08,
             0.2*(self.__steel.fu/self.__steel.fy - 1)
         )
-        strain_penetration = 0.022 * self.__steel.fy * self.__section_data.eq_bar_diameter * 10**-3
+        strain_penetration = 0.022 * self.__steel.fy * self.__section_data.eq_bar_diameter * 10**-6
         return (k_factor * L/2 + strain_penetration)
-    
+
     def get_height(self) -> float:
         """
         Returns the section height
@@ -112,7 +112,7 @@ class BasicSection(Section):
     @cache
     def get_depth(self) -> float:
         return self.__section_data.h - self.__section_data.cover
-    
+
     def get_section_data(self) -> BasicSectionInput:
         """
         Returns the validated input data
@@ -124,7 +124,7 @@ class BasicSection(Section):
         Returns the concrete material
         """
         return self.__concrete
-    
+
     def get_steel(self) -> Steel:
         """
         Returns the steel material
@@ -143,8 +143,8 @@ class BasicSection(Section):
         section id      : {self.__section_data.id}
         h               : {self.__section_data.h}
         b               : {self.__section_data.b}
-        cover           : {self.__section_data.cover} 
-        As              : {self.__section_data.As} 
+        cover           : {self.__section_data.cover}
+        As              : {self.__section_data.As}
         As1             : {self.__section_data.As1}
         eq_bar_diameter : {self.__section_data.eq_bar_diameter}
         s               : {self.__section_data.s}
@@ -159,7 +159,7 @@ def analytic_moment_curvature(section_data: BasicSectionInput,
                               concrete: Concrete,
                               steel: Steel,
                               direction: Direction = Direction.Positive,
-                              axial: float = 0) -> dict:
+                              axial: float = 0) -> MomentCurvature:
     """
     Computes the moment curvature of a BasicSection using analytical formulation
 
@@ -170,84 +170,108 @@ def analytic_moment_curvature(section_data: BasicSectionInput,
     :params steel: steel of the rebars
 
     :params direction: direction of bending (positive mean lower reinforcement is in tension)
-    
+
     :params axial: axial stress acting on the section
     """
+    # Unpack data for better clarity
+    E_c = concrete.E
+    ec_u = concrete.epsilon_u
+    fc = concrete.fc
+
+    b = section_data.b
+    h = section_data.h
+    cop = section_data.cover
+    As_bot = section_data.As
+    As_top = section_data.As1
+    d_top = cop
+    d_bot = h - cop
+
+    E_s = steel.E
+    ey_s = steel.epsilon_y
+    fy_s = steel.fy
+
     # if direction is negative, swaps the top and bottom reinfocement
-    if direction == Direction.Positive:
-        # reinforcement_area (As_top, As_bot)
-        reinforcement_area = (section_data.As1, section_data.As)
-    else:
-        # reinforcement_area (As_top, As_bot)
-        reinforcement_area = (section_data.As, section_data.As1)
-    
-    moment_curvature = dict()
-    
-    reinforcement_depth = (section_data.cover, section_data.h - section_data.cover)
+    if direction is Direction.Negative:
+        As_top, As_bot = As_bot, As_top
 
-    # yielding point, top epsilon is positive
-    epsilon_c_top = max(np.roots([
-        0.5 * concrete.E * section_data.b * reinforcement_depth[1] + steel.E * reinforcement_area[0] * (1 - reinforcement_depth[0]/reinforcement_depth[1]),
-        steel.E * reinforcement_area[0] * -steel.epsilon_y * (2 * reinforcement_depth[0]/reinforcement_depth[1]- 1) - reinforcement_area[1] * steel.fy - axial,
-        -steel.epsilon_y * (axial + reinforcement_area[1] * steel.fy + steel.E * reinforcement_area[0] * steel.epsilon_y * reinforcement_depth[0]/reinforcement_depth[1])
-        ]))
+    # Yelding point, top epsilon is positive
+    ec_top = max(
+        np.roots(
+            [
+                0.5 * E_c * b * d_bot + steel.E * As_top * (1 - d_top/d_bot),
+                - ey_s * E_s * As_top * (2 * d_top/d_bot - 1) - As_bot * fy_s - axial,
+                - ey_s * (axial + As_bot * fy_s + E_s * As_top * ey_s * d_top/d_top)
+            ]
+        )
+    )
 
-    curvature = (epsilon_c_top + steel.epsilon_y) / reinforcement_depth[1]
-    neutral_axis_depth = reinforcement_depth[1] * epsilon_c_top / (epsilon_c_top + steel.epsilon_y)
+    curvature = (ec_top + ey_s) / d_bot
+    n_axis_depth = d_bot * ec_top / (ec_top + ey_s)
 
-    epsilon_steel_top = curvature * (neutral_axis_depth - section_data.cover)
-    steel_tension = (epsilon_steel_top * steel.E, -steel.fy)
-    steel_force = tuple(tension * area for tension, area in zip(steel_tension, reinforcement_area))
-    steel_moment = tuple(force * (section_data.h/2 - depth) for force, depth in zip(steel_force, reinforcement_depth))
+    es_top = curvature * (n_axis_depth - cop)
 
-    concrete_moment = 0.5 * concrete.E * epsilon_c_top * section_data.b * neutral_axis_depth * (section_data.h/2 - neutral_axis_depth/3)
+    steel_stress_top = es_top * E_s
+    steel_stress_bot = -fy_s
 
-    moment_curvature['yielding'] = {
-        'moment' : sum(steel_moment) + concrete_moment,
-        'curvature' : curvature 
-    }
-    
-    # ultimate point, bottom epsilon is negative
-    epsilon_steel_bot = min(np.roots([
-        -steel.E * reinforcement_area[0] * reinforcement_depth[0]/reinforcement_depth[1],
-        axial + steel.fy * reinforcement_area[1] + steel.E * reinforcement_area[0] * concrete.epsilon_u * (2 * reinforcement_depth[0]/reinforcement_depth[1] - 1),
-        (0.8 * concrete.fc * section_data.b * reinforcement_depth[1] + steel.E * reinforcement_area[0] * concrete.epsilon_u * (1 - reinforcement_depth[0]/reinforcement_depth[1]) - steel.fy * reinforcement_area[1] - axial) * concrete.epsilon_u
-    ]))
+    steel_force_top = steel_stress_top * As_top
+    steel_force_bot = steel_stress_bot * As_bot
 
-    curvature = (concrete.epsilon_u - epsilon_steel_bot) / reinforcement_depth[1]
-    neutral_axis_depth = reinforcement_depth[1] * concrete.epsilon_u / (concrete.epsilon_u - epsilon_steel_bot)
-    epsilon_steel_top = curvature * (neutral_axis_depth - section_data.cover)
+    steel_moment = steel_force_top * (h/2 - d_top) + steel_force_bot * (h/2 - d_bot)
+    concrete_moment = 0.5 * E_c * ec_top * b * n_axis_depth * (h/2 - n_axis_depth/3)
+
+    moment_yielding = steel_moment + concrete_moment
+    curvature_yielding = curvature
+
+    # Capacity point, bottom epsilon is negative
+    es_bot = min(
+        np.roots(
+            [
+                -E_s * As_top * d_top/d_bot,
+                axial + fy_s * As_bot + E_s * As_top * ec_u * (2 * d_top/d_bot - 1),
+                (0.8 * fc * b * d_bot + E_s * As_top * ec_u * (1 - d_top/d_bot) - fy_s * As_bot - axial) * ec_u
+            ]
+        )
+    )
+
+    curvature = (ec_u - es_bot) / d_bot
+    n_axis_depth = d_bot * ec_u / (ec_u - es_bot)
+    es_top = curvature * (n_axis_depth - cop)
+
     # if top steel yields
-    if epsilon_steel_top > steel.epsilon_y:
-        epsilon_steel_bot = concrete.epsilon_u * (0.8 * concrete.fc * section_data.b * reinforcement_depth[1] + steel.fy * (reinforcement_area[0] - reinforcement_area[1]) - axial) / (steel.fy * (reinforcement_area[0] - reinforcement_area[1]) - axial)
-        curvature = (concrete.epsilon_u - epsilon_steel_bot) / reinforcement_depth[1]
-        neutral_axis_depth = reinforcement_depth[1] * concrete.epsilon_u / (concrete.epsilon_u - epsilon_steel_bot)
-        steel_tension = (steel.fy, -steel.fy)
-    else: 
-        steel_tension = (epsilon_steel_top * steel.E, -steel.fy)
+    if es_top > ey_s:
+        es_bot = ec_u * (0.8 * fc * b * d_bot + fy_s * (As_top - As_bot) - axial) / (fy_s * (As_top - As_bot) - axial)
+        curvature = (ec_u - es_bot) / d_bot
+        n_axis_depth = d_bot * ec_u / (ec_u - es_bot)
+        steel_tension_top = fy_s
+    else:
+        steel_tension_top = es_top * E_s
+    steel_tension_bot = -fy_s
 
-    steel_force = tuple(tension * area for tension, area in zip(steel_tension, reinforcement_area))
-    steel_moment = tuple(force * (section_data.h/2 - depth) for force, depth in zip(steel_force, reinforcement_depth))
+    steel_force_top = steel_tension_top * As_top
+    steel_force_bot = steel_tension_bot * As_bot
 
-    concrete_moment = 0.8 * concrete.fc * section_data.b * neutral_axis_depth * (section_data.h/2 - 0.4 * neutral_axis_depth)
-    
-    moment_curvature['ultimate'] = {
-        'moment' : sum(steel_moment) + concrete_moment,
-        'curvature' : curvature 
-    }
+    steel_moment = steel_force_top * (h/2 - d_top) + steel_force_bot * (h/2 - d_bot)
+    concrete_moment = 0.8 * fc * b * n_axis_depth * (h/2 - 0.4 * n_axis_depth)
 
-    return moment_curvature
-    
+    moment_capacity = steel_moment + concrete_moment
+    curvature_capacity = curvature
+
+    return MomentCurvature(
+        mom_y=moment_yielding,
+        mom_c=moment_capacity,
+        phi_y=curvature_yielding,
+        phi_c=curvature_capacity
+    )
+
 # -----------------------------------------------------
 # Shear Capacity Alghoritms
 # -----------------------------------------------------
-
 @cache
-def shear_NZSEE2017(section_data: BasicSectionInput, 
-                    concrete: Concrete, 
-                    steel: Steel, 
-                    L: float, 
-                    axial: float = 0.) -> dict:
+def shear_NZSEE2017(section_data: BasicSectionInput,
+                    concrete: Concrete,
+                    steel: Steel,
+                    L: float,
+                    axial: float = 0.) -> ShearEnvelope:
     """
     Shear capacity model provided by NZSEE2017
 
@@ -258,53 +282,67 @@ def shear_NZSEE2017(section_data: BasicSectionInput,
     :params steel: steel of the rebars
 
     :params L: length of the elemtn that contains the section
-    
+
     :params axial: axial stress acting on the section
     """
-    section_depth = section_data.h - section_data.cover
+    # Unpack data for better clarity
+    fc = concrete.fc
+
+    b = section_data.b
+    h = section_data.h
+    s = section_data.s          # stirups spacing
+    cop = section_data.cover
+    As_bot = section_data.As
+    As_top = section_data.As1
+    d_top = cop
+    d_bot = h - cop
+
+    fy_s = steel.fy
+
+    section_depth = d_bot - d_top
 
     # concrete contribution
     alpha = min(
         1.5,
         max(
             1,
-            3 - L/section_data.h
+            3 - L/h
         )
     )
-
     beta = min(
         1,
-        0.5 + 20 * (section_data.As + section_data.As1) / (section_data.b * section_data.h)
+        0.5 + 20 * (As_top + As_bot) / (b * h)
     )
-
     gamma = np.array([0.29, 0.05])
 
-    #dubbi sull'ordine di grandezza
-    shear_concrete = gamma * alpha * beta * 0.8 * section_depth * section_data.b * math.sqrt(concrete.fc * 10**-3) * 10**3
+    shear_concrete = gamma * alpha * beta * 0.8 * section_depth * b * math.sqrt(fc * 10**-3) * 10**3
 
     # steel contribution
-    shear_steel = section_data.Ast * steel.fy * section_depth / section_data.s
+    shear_steel = section_data.Ast * fy_s * section_depth/s
 
     # axial contribution
-    indicative_neutral_axis = 0.15 * section_data.h       # momentary
-    shear_axial = axial * (section_data.h - indicative_neutral_axis) / L
+    indicative_neutral_axis = 0.15 * h
+    shear_axial = axial * (h - indicative_neutral_axis) / L
 
     # total shear capacity
     shear_capacity = (shear_concrete + shear_axial + shear_steel) * 0.85
 
-    return {
-        'curvature_ductility' : (3, 15),
-        'shear_capacity' : tuple(shear_capacity)
-    }
+    return ShearEnvelope(
+        cap_undamaged=shear_capacity[0],
+        cap_residual=shear_capacity[1],
+        duc_undamaged=3,
+        duc_residual=15
+    )
+
 
 # -----------------------------------------------------
 # MN Domains Algorithms
 # -----------------------------------------------------
 @cache
-def four_points_MN_domain(section_data: BasicSectionInput, 
-                          concrete: Concrete, 
-                          steel: Steel, 
-                          direction: Direction = Direction.Positive) -> List[float]:
+def four_points_MN_domain(section_data: BasicSectionInput,
+                          concrete: Concrete,
+                          steel: Steel,
+                          direction: Direction = Direction.Positive) -> MNDomain:
     """
     Computes the four points of the domain
 
@@ -316,64 +354,76 @@ def four_points_MN_domain(section_data: BasicSectionInput,
 
     :params direction: direction of bending (positive mean lower reinforcement is in tension)
     """
-    if direction == Direction.Positive:
-        reinforcement_area = (section_data.As1, section_data.As)
-    else:
-        reinforcement_area = (section_data.As, section_data.As1)
+    # Unpack data for better clarity
+    E_c = concrete.E
+    ec_u = concrete.epsilon_u
+    fc = concrete.fc
+
+    b = section_data.b
+    h = section_data.h
+    cop = section_data.cover
+    As_bot = section_data.As
+    As_top = section_data.As1
+    d_top = cop
+    d_bot = h - cop
+
+    E_s = steel.E
+    ey_s = steel.epsilon_y
+    fy_s = steel.fy
+
+    # if direction is negative, swaps the top and bottom reinfocement
+    if direction is Direction.Negative:
+        As_top, As_bot = As_bot, As_top
 
     # Point A
-    axial_A = -steel.fy * sum(reinforcement_area)
-    moment_A = steel.fy * (reinforcement_area[1] - reinforcement_area[0]) * (section_data.h / 2 - section_data.cover)
+    axial_A = - fy_s * (As_top + As_bot)
+    moment_A = fy_s * (As_bot - As_top) * (h / 2 - cop)
 
     # Point B
-    neutral_axis = (section_data.h - section_data.cover) * concrete.epsilon_u / (concrete.epsilon_u + 10**-2)
-    epsilon_steel_top = concrete.epsilon_u/neutral_axis * (neutral_axis - section_data.cover)
+    neutral_axis = (h - cop) * ec_u / (ec_u + 10**-2)
+    es_top = ec_u/neutral_axis * (neutral_axis - cop)
 
     axial_B = (
-        neutral_axis * 0.8 * section_data.b * concrete.fc 
-        + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) 
-        - reinforcement_area[1] * steel.fy
+        neutral_axis * 0.8 * b * fc
+        + As_top * min(E_s * es_top, fy_s)
+        - As_bot * fy_s
         )
     moment_B = (
-        neutral_axis * 0.8 * section_data.b * concrete.fc * (section_data.h/2 - 0.4 * neutral_axis) 
-        + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) * (section_data.h/2 - section_data.cover)
-        + reinforcement_area[1] * steel.fy * (section_data.h/2 - section_data.cover)
+        neutral_axis * 0.8 * b * fc * (h/2 - 0.4 * neutral_axis)
+        + As_top * min(E_s * es_top, fy_s) * (h/2 - cop)
+        + As_bot * fy_s * (h/2 - cop)
     )
 
     # Point C
-    neutral_axis = (section_data.h - section_data.cover) * concrete.epsilon_u / (concrete.epsilon_u + steel.epsilon_y)
-    epsilon_steel_top = concrete.epsilon_u/neutral_axis * (neutral_axis - section_data.cover)
+    neutral_axis = (h - cop) * ec_u / (ec_u + ey_s)
+    es_top = ec_u/neutral_axis * (neutral_axis - cop)
 
     axial_C = (
-        neutral_axis * 0.8 * section_data.b * concrete.fc 
-        + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) 
-        - reinforcement_area[1] * steel.fy
+        neutral_axis * 0.8 * b * fc
+        + As_top * min(E_s * es_top, fy_s)
+        - As_bot * fy_s
         )
     moment_C = (
-        neutral_axis * 0.8 * section_data.b * concrete.fc * (section_data.h/2 - 0.4 * neutral_axis) 
-        + reinforcement_area[0] * min(steel.E * epsilon_steel_top, steel.fy) * (section_data.h/2 - section_data.cover)
-        + reinforcement_area[1] * steel.fy * (section_data.h/2 - section_data.cover)
+        neutral_axis * 0.8 * b * fc * (h/2 - 0.4 * neutral_axis)
+        + As_top * min(E_s * es_top, fy_s) * (h/2 - cop)
+        + As_bot * fy_s * (h/2 - cop)
     )
 
     # Point D
-    axial_D = section_data.b * section_data.h * concrete.fc - axial_A
-    moment_D = -moment_A 
+    axial_D = b * h * fc - axial_A
+    moment_D = - moment_A
 
-    return {
-        'moment' : (
+    return MNDomain(
+        moment= [
             moment_A,
             moment_B,
             moment_C,
             moment_D
-        ),
-        'axial' : (
+        ],
+        axial = [
             axial_A,
             axial_B,
             axial_C,
             axial_D
-        )
-    }
-
-
-
-
+        ]
+    )

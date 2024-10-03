@@ -1,6 +1,6 @@
 from functools import cache
 from model.enums import Direction, FailureType
-from src.elements.element import Element
+from src.elements.element import Element, MomentRotation
 from src.sections.section import Section
 from src.utils import intersection
 
@@ -15,7 +15,7 @@ class BasicElement(Element):
         """
         self.__section = section
         self.__L = round(L, ndigits=2)
-    
+
     def match(self, section: Section, L: float) -> bool:
         """
         Check if an instance match given data
@@ -23,14 +23,15 @@ class BasicElement(Element):
         return (self.__section.get_section_data() == section.get_section_data()) and (self.__L == round(L, ndigits=2))
 
     @cache
-    def moment_rotation(self, direction: Direction=Direction.Positive, consider_shear_iteraction: bool=True, axial: float=0.) -> dict:
+    def moment_rotation(self,
+                        direction: Direction=Direction.Positive,
+                        consider_shear_iteraction: bool=True,
+                        axial: float=0.) -> dict:
         """
         Computes the moment rotation of the element
 
         :params direction: direction of bending (positive mean lower reinforcement is in tension)
-
         :params consider_shear_interaction: consider the limiting capability of shear capacity
-
         :params axial: axial stress on the section
         """
         moment_curvature = self.__section.moment_curvature(
@@ -39,16 +40,16 @@ class BasicElement(Element):
         )
         plastic_hinge = self.__section.plastic_hinge_length(self.__L)
 
-        yielding_rotation = moment_curvature['yielding']['curvature'] * self.__L/6
-        plastic_rotation = plastic_hinge * (moment_curvature['ultimate']['curvature'] 
-                                           - moment_curvature['yielding']['curvature'])
+        yielding_rotation = moment_curvature.phi_y * self.__L/6
+        plastic_rotation = plastic_hinge * (moment_curvature.phi_c - moment_curvature.phi_y)
 
         moment_rotation = {
-            'moment' : (moment_curvature['yielding']['moment'], moment_curvature['ultimate']['moment']),
+            'moment' : (moment_curvature.mom_y, moment_curvature.mom_c),
             'rotation' : (yielding_rotation, yielding_rotation + plastic_rotation)
         }
 
         if not consider_shear_iteraction:
+            moment_rotation['failure'] = FailureType.Moment
             return moment_rotation
 
         shear_capacity = self.__section.shear_capacity(
@@ -58,11 +59,11 @@ class BasicElement(Element):
 
         shear_capacity_envelope = {
             'moment' : tuple(
-                shear * self.__L/2 for shear in shear_capacity['shear_capacity']
+                shear * self.__L/2 for shear in (shear_capacity.cap_undamaged, shear_capacity.cap_residual)
             ),
             'rotation' : tuple(
-                yielding_rotation + (ductility - 1) * plastic_hinge * moment_curvature['yielding']['curvature'] 
-                for ductility in shear_capacity['curvature_ductility']
+                yielding_rotation + (ductility - 1) * plastic_hinge * moment_curvature.phi_y
+                for ductility in (shear_capacity.duc_undamaged, shear_capacity.duc_residual)
             ),
         }
 
@@ -70,7 +71,7 @@ class BasicElement(Element):
             # shear failure not possible
             moment_rotation['failure'] = FailureType.Moment
             return moment_rotation
-            
+
 
         if shear_capacity_envelope['moment'][0] <= moment_rotation['moment'][0]:
             # shear failure in elastic loading
@@ -81,14 +82,14 @@ class BasicElement(Element):
                 ) * 2,
                 'failure' : FailureType.ShearFragile
             }
-        
+
         if shear_capacity_envelope['rotation'][0] >= moment_rotation['rotation'][1]:
 
             if shear_capacity_envelope['moment'][0] >= moment_rotation['moment'][1]:
                 # shear failure not possible
                 moment_rotation['failure'] = FailureType.Moment
                 return moment_rotation
-        
+
         else:
             shear_interaction_slope = (
                 (shear_capacity_envelope['moment'][1] - shear_capacity_envelope['moment'][0])
@@ -103,7 +104,7 @@ class BasicElement(Element):
                 # shear failure not possible
                 moment_rotation['failure'] = FailureType.Moment
                 return moment_rotation
-           
+
         if shear_capacity_envelope['rotation'][-1] <= moment_rotation['rotation'][-1]:
             # extension of shear interaction definition
             shear_capacity_envelope['rotation'] += (moment_rotation['rotation'][-1],)
@@ -120,7 +121,7 @@ class BasicElement(Element):
             # shear failure not found
             moment_rotation['failure'] = FailureType.Moment
             return moment_rotation
-        
+
         return {
             'moment' : (moment_rotation['moment'][0], shear_interaction['y']),
             'rotation' : (moment_rotation['rotation'][0], shear_interaction['x']),
@@ -144,7 +145,7 @@ class BasicElement(Element):
         Get section object of the element
         """
         return self.__section
-        
+
     def __str__(self) -> str:
         return self.__section.__str__() + f"L               : {self.__L}\n"
 

@@ -1,7 +1,18 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
-from model.enums import Direction
+from model.enums import Direction, FailureType
 from src.sections import Section
+
+
+@dataclass
+class MomentRotation:
+    mom_y: float    # yielding moment
+    mom_c: float    # capacity moment
+    rot_y: float    # yielding rotation
+    rot_c: float    # capacity rotation
+    failure: FailureType
+
 
 class Element(ABC):
     """

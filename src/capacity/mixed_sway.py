@@ -10,14 +10,14 @@ import numpy as np
 G = 9.81
 
 def mixed_sidesway(
-    sub_factory: SubassemblyFactory, 
-    frame: RegularFrame, 
+    sub_factory: SubassemblyFactory,
+    frame: RegularFrame,
     direction: Direction=Direction.Positive) -> FrameCapacity:
     """
     Computes the mixed sidesway of a frame
 
     Args:
-        sub_factory (SubassemblyFactory): object that handles the subassembly creation 
+        sub_factory (SubassemblyFactory): object that handles the subassembly creation
         frame (RegularFrame): Frame data
         direction (Direction, optional): Direction of push. Defaults to Direction.Positive.
 
@@ -33,7 +33,7 @@ def mixed_sidesway(
         subassembly = sub_factory.get_subassembly(
             subassembly_id
         )
-        
+
         sub_capacities[subassembly_id] = {
             'moment' : subassembly.above_column.moment_rotation(
                 direction=direction,
@@ -46,9 +46,9 @@ def mixed_sidesway(
             'ultimate' : subassembly.above_column.moment_rotation(
                 direction=direction,
                 axial=subassembly.axial
-            )['rotation'][-1] 
+            )['rotation'][-1]
         }
-    
+
     # Subassemblies
     for sub_id in range(frame.verticals, frame.get_node_count()):
         subassembly = sub_factory.get_subassembly(
@@ -58,7 +58,7 @@ def mixed_sidesway(
         sub_capacities[sub_id] = {
             'moment' : subassembly.get_hierarchy(direction=direction)['beam_equivalent'],
             'yielding' : subassembly.get_hierarchy(direction=direction)['rotation_yielding'],
-            'ultimate' : subassembly.get_hierarchy(direction=direction)['rotation_ultimate'] 
+            'ultimate' : subassembly.get_hierarchy(direction=direction)['rotation_ultimate']
         }
 
     delta_axials = np.zeros(frame.get_node_count())
@@ -67,7 +67,7 @@ def mixed_sidesway(
 
         if sub_id < frame.verticals:
             continue
-        
+
         subassembly = sub_factory.get_subassembly(sub_id)
         if subassembly.left_beam is not None:
             delta_axials[sub_id] += (
@@ -80,17 +80,17 @@ def mixed_sidesway(
                 direction * (sub_capacities[sub_id + 1]['moment'] + capacity['moment'])
                 / subassembly.right_beam.get_element_lenght()
             )
-        
-    
+
+
     base_delta_axials = [sum(delta_axials[i::frame.verticals]) for i in range(frame.verticals)]
     overturning_moment = direction * sum(
-            delta_axial * length 
+            delta_axial * length
             for delta_axial, length in zip(base_delta_axials, frame.get_lengths())
         ) + sum(sub_capacities[sub_id]['moment'] for sub_id in range(frame.verticals))
-    
+
     ultimate_frame_rotation = min([sub_data['ultimate'] for sub_data in sub_capacities])
     yielding_frame_rotation = min([sub_data['yielding'] for sub_data in sub_capacities])
-    
+
     capacity = {
         'name' : 'Mixed Sidesway',
         'mass' : frame.get_effective_mass(),

@@ -7,12 +7,12 @@ from model.data_models import FrameCapacity
 G = 9.81
 
 def column_sidesway(
-    sub_factory: SubassemblyFactory, 
-    frame: RegularFrame, 
+    sub_factory: SubassemblyFactory,
+    frame: RegularFrame,
     direction: Direction=Direction.Positive) -> FrameCapacity:
     """
     Computes the column sidesway of a frame
-    
+
     Args:
         sub_factory (SubassemblyFactory): Subassemblly factory of the given frame
         frame (RegularFrame): frame shared by subassembly_factory
@@ -35,22 +35,22 @@ def column_sidesway(
                 axial=subassembly.axial
             )
         )
-    
+
     overturning_moment = sum(
-        column_moment_rotation['moment'][-1] 
+        column_moment_rotation['moment'][-1]
         for column_moment_rotation in column_moment_rotations
     )
 
     yielding_rotation = min(
-        column_moment_rotation['rotation'][0] 
+        column_moment_rotation['rotation'][0]
         for column_moment_rotation in column_moment_rotations
     )
     ultimate_rotation = min(
-        column_moment_rotation['rotation'][-1] 
+        column_moment_rotation['rotation'][-1]
         for column_moment_rotation in column_moment_rotations
     )
     H_eff = 0.5 * frame.get_heights()[-1]
-    
+
     capacity = {
         'name' : 'Column Sidesway',
         'mass' : frame.get_effective_mass(),
