@@ -13,10 +13,10 @@ class Direction(int, Enum):
     Negative    = -1
 
 
-class FailureType(Enum):
-    ShearDuctile = auto()
-    ShearFragile = auto()
-    Moment       = auto()
+class FailureType(int, Enum):
+    ShearDuctile = 0
+    ShearFragile = 1
+    Moment       = 2
 
 
 class SectionType(Enum):

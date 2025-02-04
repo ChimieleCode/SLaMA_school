@@ -10,8 +10,8 @@ import numpy as np
 G = 9.81
 
 def beam_sidesway(
-    sub_factory: SubassemblyFactory, 
-    frame: RegularFrame, 
+    sub_factory: SubassemblyFactory,
+    frame: RegularFrame,
     direction: Direction=Direction.Positive) -> FrameCapacity:
     """
     Computes the beam sidesway of a frame
@@ -34,14 +34,15 @@ def beam_sidesway(
                 vertical=vertical
             )
         )
-        
+
+        assert subassembly.above_column is not None
         column_moment_capacity.append(
             subassembly.above_column.moment_rotation(
                 direction=direction,
                 axial=subassembly.axial
-            )['moment'][-1]
+            ).mom_c
         )
-    
+
     # Beams
     delta_axials = np.zeros((frame.verticals, frame.floors))
     yielding_rotations = list()
@@ -66,12 +67,12 @@ def beam_sidesway(
                 )
             }
             delta_axials[vertical][floor] += direction * sum(
-                moment_rotation['moment'][-1] for moment_rotation in moment_rotations.values()
+                moment_rotation.mom_c for moment_rotation in moment_rotations.values()
                 )/subassembly.left_beam.get_element_lenght()
 
             for moment_rotation in moment_rotations.values():
-                yielding_rotations.append(moment_rotation['rotation'][0])
-                ultimate_rotations.append(moment_rotation['rotation'][-1])
+                yielding_rotations.append(moment_rotation.rot_y)
+                ultimate_rotations.append(moment_rotation.rot_c)
 
         if subassembly.right_beam is not None:
             moment_rotations = {
@@ -85,28 +86,27 @@ def beam_sidesway(
                 )
             }
             delta_axials[vertical][floor] -= direction * sum(
-                moment_rotation['moment'][-1] for moment_rotation in moment_rotations.values()
+                moment_rotation.mom_c for moment_rotation in moment_rotations.values()
                 )/subassembly.right_beam.get_element_lenght()
-            
+
             for moment_rotation in moment_rotations.values():
-                yielding_rotations.append(moment_rotation['rotation'][0])
-                ultimate_rotations.append(moment_rotation['rotation'][-1])
+                yielding_rotations.append(moment_rotation.rot_y)
+                ultimate_rotations.append(moment_rotation.rot_c)
 
     base_delta_axials = [sum(delta_axial_vertical) for delta_axial_vertical in delta_axials]
     overturning_moment = direction * sum(
-            delta_axial * length 
+            delta_axial * length
             for delta_axial, length in zip(base_delta_axials, frame.get_lengths())
         ) + sum(column_moment_capacity)
-    
-    capacity = {
-        'name' : 'Beam Sidesway',
-        'mass' : frame.get_effective_mass(),
-        'base_shear' : [overturning_moment / frame.forces_effective_height] * 2,
-        'disp' : [
+
+    return FrameCapacity(
+        name='Beam Sidesway',
+        mass=frame.get_effective_mass(),
+        base_shear=[overturning_moment / frame.forces_effective_height] * 2,
+        disp=[
             min(yielding_rotations) * frame.forces_effective_height,
             min(ultimate_rotations) * frame.forces_effective_height
         ]
-    }
-    return FrameCapacity(**capacity)
+    )
 
 

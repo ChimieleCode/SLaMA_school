@@ -2,18 +2,19 @@ import math
 import numpy as np
 import model.config as config
 from functools import cache
-from typing import List
 
 from model.validation.section_model import BasicSectionInput
 from model.enums import Direction, SectionType
 from src.concrete import Concrete
 from src.steel.steel import Steel
-from .section import MNDomain, Section, MomentCurvature, ShearEnvelope
+from src.sections import MNDomain, Section, MomentCurvature, ShearEnvelope
 from src.utils import import_configuration
+
 
 # Import config data
 cfg : config.MNINTConfig
 cfg = import_configuration(config.CONFIG_PATH, object_hook=config.MNINTConfig)
+
 
 class BasicSection(Section):
 
@@ -25,10 +26,10 @@ class BasicSection(Section):
         """
         Defines an object that contains section data
         """
-        self.__section_data = section_data
-        self.__concrete = concrete
-        self.__steel = steel
-        self.__section_type = section_type
+        self._section_data = section_data
+        self._concrete = concrete
+        self._steel = steel
+        self._section_type = section_type
 
     def moment_curvature(self, direction: Direction = Direction.Positive, axial: float = 0.) -> MomentCurvature:
         """
@@ -38,9 +39,9 @@ class BasicSection(Section):
             config.MomentCurvatureAlg.StressBlock : analytic_moment_curvature
         }
         return algs[cfg.element_settings.moment_curvature](
-            section_data=self.__section_data,
-            concrete=self.__concrete,
-            steel=self.__steel,
+            section_data=self._section_data,
+            concrete=self._concrete,
+            steel=self._steel,
             direction=direction,
             axial=round(axial, ndigits=2)
         )
@@ -53,9 +54,9 @@ class BasicSection(Section):
             config.DomainMNAlg.FourPoints : four_points_MN_domain
         }
         domain = algs[cfg.element_settings.domain_mn](
-            section_data=self.__section_data,
-            concrete=self.__concrete,
-            steel=self.__steel,
+            section_data=self._section_data,
+            concrete=self._concrete,
+            steel=self._steel,
             direction=direction
         )
 
@@ -69,7 +70,7 @@ class BasicSection(Section):
             )
         )
 
-    def shear_capacity(self, L: float, axial: float = 0.) -> dict:
+    def shear_capacity(self, L: float, axial: float = 0.) -> ShearEnvelope:
         """
         Computes the shear capacity of the section
         """
@@ -78,9 +79,9 @@ class BasicSection(Section):
             config.ShearFormula.NZSEE2017 : shear_NZSEE2017
         }
         return algs[cfg.element_settings.shear_formulation](
-            section_data=self.__section_data,
-            concrete=self.__concrete,
-            steel=self.__steel,
+            section_data=self._section_data,
+            concrete=self._concrete,
+            steel=self._steel,
             L=round(L, ndigits=2),
             axial=round(axial, ndigits=2)
         )
@@ -92,62 +93,61 @@ class BasicSection(Section):
         """
         k_factor = min(
             0.08,
-            0.2*(self.__steel.fu/self.__steel.fy - 1)
+            0.2*(self._steel.fu/self._steel.fy - 1)
         )
-        strain_penetration = 0.022 * self.__steel.fy * self.__section_data.eq_bar_diameter * 10**-6
+        strain_penetration = 0.022 * self._steel.fy * self._section_data.eq_bar_diameter * 10**-3
         return (k_factor * L/2 + strain_penetration)
 
     def get_height(self) -> float:
         """
         Returns the section height
         """
-        return self.__section_data.h
+        return self._section_data.h
 
     def get_effective_width(self) -> float:
         """
         Returns the effective width of the section
         """
-        return self.__section_data.b
+        return self._section_data.b
 
-    @cache
     def get_depth(self) -> float:
-        return self.__section_data.h - self.__section_data.cover
+        return self._section_data.h - self._section_data.cover
 
     def get_section_data(self) -> BasicSectionInput:
         """
         Returns the validated input data
         """
-        return self.__section_data
+        return self._section_data
 
     def get_concrete(self) -> Concrete:
         """
         Returns the concrete material
         """
-        return self.__concrete
+        return self._concrete
 
     def get_steel(self) -> Steel:
         """
         Returns the steel material
         """
-        return self.__steel
+        return self._steel
 
     def get_section_type(self) -> SectionType:
         """
         Return section type
         """
-        return self.__section_type
+        return self._section_type
 
     def __str__(self) -> str:
         return f"""
         BasicSection Object
-        section id      : {self.__section_data.id}
-        h               : {self.__section_data.h}
-        b               : {self.__section_data.b}
-        cover           : {self.__section_data.cover}
-        As              : {self.__section_data.As}
-        As1             : {self.__section_data.As1}
-        eq_bar_diameter : {self.__section_data.eq_bar_diameter}
-        s               : {self.__section_data.s}
+        section id      : {self._section_data.id}
+        h               : {self._section_data.h}
+        b               : {self._section_data.b}
+        cover           : {self._section_data.cover}
+        As              : {self._section_data.As}
+        As1             : {self._section_data.As1}
+        eq_bar_diameter : {self._section_data.eq_bar_diameter}
+        s               : {self._section_data.s}
         """
 
 # -----------------------------------------------------
@@ -200,7 +200,7 @@ def analytic_moment_curvature(section_data: BasicSectionInput,
             [
                 0.5 * E_c * b * d_bot + steel.E * As_top * (1 - d_top/d_bot),
                 - ey_s * E_s * As_top * (2 * d_top/d_bot - 1) - As_bot * fy_s - axial,
-                - ey_s * (axial + As_bot * fy_s + E_s * As_top * ey_s * d_top/d_top)
+                - ey_s * (axial + As_bot * fy_s + E_s * As_top * ey_s * d_top/d_bot)
             ]
         )
     )
@@ -245,7 +245,13 @@ def analytic_moment_curvature(section_data: BasicSectionInput,
         steel_tension_top = fy_s
     else:
         steel_tension_top = es_top * E_s
-    steel_tension_bot = -fy_s
+
+    # if bottom does not yield, negative because in traction
+    if es_bot < -ey_s:
+        print('WARNING CLASS 4 FRAGILE NOT IMPLEMENTED')
+        steel_tension_bot = -fy_s
+    else:
+        steel_tension_bot = -fy_s
 
     steel_force_top = steel_tension_top * As_top
     steel_force_bot = steel_tension_bot * As_bot
@@ -355,7 +361,6 @@ def four_points_MN_domain(section_data: BasicSectionInput,
     :params direction: direction of bending (positive mean lower reinforcement is in tension)
     """
     # Unpack data for better clarity
-    E_c = concrete.E
     ec_u = concrete.epsilon_u
     fc = concrete.fc
 
@@ -364,8 +369,6 @@ def four_points_MN_domain(section_data: BasicSectionInput,
     cop = section_data.cover
     As_bot = section_data.As
     As_top = section_data.As1
-    d_top = cop
-    d_bot = h - cop
 
     E_s = steel.E
     ey_s = steel.epsilon_y

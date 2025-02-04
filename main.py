@@ -5,9 +5,9 @@ from model.validation import (Regular2DFrameInput, BasicSectionCollectionInput,
                               SimpleMaterialInput, NTC2018HazardInput)
 from src.steel import Steel   # does not see the package
 from src.concrete import Concrete
-from src.sections import BasicSection
+from src.sections.basic_section import BasicSection
 from src.frame import RegularFrameBuilder
-from src.elements import BasicElement
+from src.elements.basic_element import BasicElement
 from src.subassembly import SubassemblyFactory
 from src.hazard import NTC2018SeismicHazard
 from src.frame.regular_frame import RegularFrame
@@ -76,7 +76,7 @@ def main():
     # -o-o-o-o-o- COMPUTE CAPACIIES -o-o-o-o-o-
 
     # print(frame.get_effective_mass())
-    
+
     # Compute capacity
     beam_SLaMA = beam_sidesway(
         sub_factory=subassemly_factory,
@@ -92,10 +92,17 @@ def main():
         sub_factory=subassemly_factory,
         frame=frame
     )
+
+    export_subassemblies_as_csv(
+        Path('outputs/subassemplies.csv'),
+        subassemly_factory,
+        frame
+    )
     print('Classic:', classic_SLaMA, '\n')
     print('Beam:', beam_SLaMA, '\n')
     print('Column:', column_SLaMA, '\n')
     print(frame.forces_effective_height)
+    print(frame.get_delta_axial(7))
 
 
 
@@ -119,7 +126,9 @@ def get_subassemby_hierarchy(sub_factory: SubassemblyFactory, frame: RegularFram
     return mechanisms
 
 
-def export_subassemblies_as_csv(subassemly_factory, frame):
+def export_subassemblies_as_csv(path: Path,
+                                subassemly_factory: SubassemblyFactory,
+                                frame: RegularFrame):
     import csv
 
     subs = get_mixed_sidesway_capacities(subassemly_factory, frame)
@@ -133,7 +142,7 @@ def export_subassemblies_as_csv(subassemly_factory, frame):
         [sub['element'] for sub in subs]
     )
 
-    with open(Path('Outputs/subs.csv'), 'w', newline='') as csvfile:
+    with open(path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
 
         writer.writerow(header)
@@ -142,27 +151,27 @@ def export_subassemblies_as_csv(subassemly_factory, frame):
 
 def get_mixed_sidesway_capacities(sub_factory: SubassemblyFactory, frame: RegularFrame, direction: Direction = Direction.Positive):
 
-    sub_capacities = [0] * frame.get_node_count()
+    sub_capacities = [{}] * frame.get_node_count()
     for vertical in range(frame.verticals):
         subassembly_id = frame.get_node_id(
                 floor=0,
                 vertical=vertical
             )
         subassembly = sub_factory.get_subassembly(subassembly_id)
-
+        assert subassembly.above_column is not None
         sub_capacities[subassembly_id] = {
             'moment' : subassembly.above_column.moment_rotation(
                 direction=direction,
                 axial=subassembly.axial
-            )['moment'][-1],
+            ).mom_c,
             'yielding' : subassembly.above_column.moment_rotation(
                 direction=direction,
                 axial=subassembly.axial
-            )['rotation'][0],
+            ).rot_y,
             'ultimate' : subassembly.above_column.moment_rotation(
                 direction=direction,
                 axial=subassembly.axial
-            )['rotation'][-1],
+            ).rot_c,
             'element' : ElementType.Column
         }
 
@@ -173,10 +182,10 @@ def get_mixed_sidesway_capacities(sub_factory: SubassemblyFactory, frame: Regula
         )
 
         sub_capacities[sub_id] = {
-            'moment' : subassembly.get_hierarchy(direction=direction)['beam_equivalent'],
-            'yielding' : subassembly.get_hierarchy(direction=direction)['rotation_yielding'],
-            'ultimate' : subassembly.get_hierarchy(direction=direction)['rotation_ultimate'],
-            'element' : subassembly.get_hierarchy(direction=direction)['element']
+            'moment' : subassembly.get_hierarchy(direction=direction).beam_eq,
+            'yielding' : subassembly.get_hierarchy(direction=direction).rot_y,
+            'ultimate' : subassembly.get_hierarchy(direction=direction).rot_c,
+            'element' : subassembly.get_hierarchy(direction=direction).weakest
         }
 
     return sub_capacities
@@ -187,8 +196,7 @@ if __name__ == '__main__':
     import pstats
 
     with cProfile.Profile() as pr:
-        for _ in range(1):
-            main()
+        main()
 
     stats = pstats.Stats(pr)
     # stats.sort_stats(pstats.SortKey.TIME).print_stats()

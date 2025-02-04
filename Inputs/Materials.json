@@ -1,15 +1,15 @@
 {
     "concrete": {
-        "id": "DelGaudio et al. 2015 82-91",
-        "fc": 25000,
+        "id": "C14",
+        "fc": 16000.0,
         "E": 25186010.36,
-        "epsilon_0": 7e-05,
+        "epsilon_0": 0.0007,
         "epsilon_u": 0.0035
     },
     "steel": {
-        "id": "DelGaudio et al. 2015 82-91",
-        "fy": 466000,
-        "fu": 500000,
+        "id": "Fe430",
+        "fy": 392000.0,
+        "fu": 420000.0,
         "E": 210000000,
         "epsilon_u": 0.06
     }

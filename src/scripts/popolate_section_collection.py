@@ -2,7 +2,7 @@ from src.concrete.concrete import Concrete
 from model.validation.section_model import BasicSectionCollectionInput
 from model.enums import SectionType
 from src.collections.section_collection import SectionCollection
-from src.sections.section import Section
+from src.sections import Section
 from src.steel.steel import Steel
 
 
@@ -20,17 +20,17 @@ def convert_to_section_collection(validated_sections: BasicSectionCollectionInpu
         sections.add_beam_section(
             section_type(
                 section_data=validated_section,
-                concrete=concrete, 
+                concrete=concrete,
                 steel=steel,
                 section_type=SectionType.Beam
             )
         )
-    
+
     for validated_section in validated_sections.columns:
         sections.add_column_section(
             section_type(
-                section_data=validated_section, 
-                concrete=concrete, 
+                section_data=validated_section,
+                concrete=concrete,
                 steel=steel,
                 section_type=SectionType.Column
             )

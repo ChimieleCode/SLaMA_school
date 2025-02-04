@@ -1,6 +1,6 @@
 
 from typing import List, Set, Tuple
-from src.elements.element import Element
+from src.elements import Element
 
 class NodeNotFoundError(Exception):
     """
@@ -12,7 +12,6 @@ class NodeNotFoundError(Exception):
         return self.message
 
 
-
 class Graph:
 
     def __init__(self, node_count: int) -> None:
@@ -22,14 +21,14 @@ class Graph:
         self.__node_count = node_count
         self.__nodes = range(node_count)
         self.__adj_list = {node: set() for node in self.__nodes}
-    
+
     def get_nodes(self) -> range:
         return self.__nodes
 
     def get_node_count(self) -> int:
         return self.__node_count
 
-    def add_node(self) -> int:
+    def add_node(self) -> None:
         """
         Adds a node to the graph and returns new node id
         """
@@ -68,7 +67,7 @@ class Graph:
 
 
 
-    
 
 
-    
+
+

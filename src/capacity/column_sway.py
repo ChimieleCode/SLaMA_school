@@ -29,6 +29,8 @@ def column_sidesway(
                 vertical=i
             )
         )
+
+        assert subassembly.above_column is not None
         column_moment_rotations.append(
             subassembly.above_column.moment_rotation(
                 direction=direction,
@@ -37,30 +39,30 @@ def column_sidesway(
         )
 
     overturning_moment = sum(
-        column_moment_rotation['moment'][-1]
+        column_moment_rotation.mom_c
         for column_moment_rotation in column_moment_rotations
     )
 
     yielding_rotation = min(
-        column_moment_rotation['rotation'][0]
+        column_moment_rotation.rot_y
         for column_moment_rotation in column_moment_rotations
     )
     ultimate_rotation = min(
-        column_moment_rotation['rotation'][-1]
+        column_moment_rotation.rot_c
         for column_moment_rotation in column_moment_rotations
     )
     H_eff = 0.5 * frame.get_heights()[-1]
 
-    capacity = {
-        'name' : 'Column Sidesway',
-        'mass' : frame.get_effective_mass(),
-        'base_shear' : [overturning_moment / H_eff] * 2,
-        'disp' : [
-            yielding_rotation * sub_factory.get_subassembly(0).above_column.get_element_lenght(),
-            ultimate_rotation * sub_factory.get_subassembly(0).above_column.get_element_lenght()
+    first_floor_height = frame.get_interstorey_height(1)
+    return FrameCapacity(
+        name='Column Sidesway',
+        mass=frame.get_effective_mass(),
+        base_shear=[overturning_moment / H_eff] * 2,
+        disp=[
+            yielding_rotation * first_floor_height,
+            ultimate_rotation * first_floor_height
         ]
-    }
-    return FrameCapacity(**capacity)
+    )
 
 
 

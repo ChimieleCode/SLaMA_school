@@ -2,7 +2,7 @@ import json
 from pyparsing import Any
 import yaml
 from pathlib import Path
-from typing import List
+from typing import Callable, List, Sequence, Tuple
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import fsolve
@@ -22,7 +22,7 @@ def export_to_json(filepath: Path, data: dict) -> None:
     with open(filepath, 'w') as jsonfile:
         json.dump(data, jsonfile, ensure_ascii=False, indent=4)
 
-def import_configuration(config_path: Path, object_hook: object = None) -> Any:
+def import_configuration(config_path: Path, object_hook = None) -> Any:
     """
     Imports the config file and returns a dictionary if object_hook is not specified
 
@@ -43,18 +43,16 @@ def import_configuration(config_path: Path, object_hook: object = None) -> Any:
     return config_dct
 
 def analytical_intersection(
-    initial_guess: float, 
-    function_1: float, 
-    function_2: float) -> float:
+    initial_guess: float,
+    function_1: Callable[[float], float],
+    function_2: Callable[[float], float]) -> float:
     """
     Finds the closest intersection between two curves
     """
     difference_function = lambda x: function_1(x) - function_2(x)
     return fsolve(difference_function, initial_guess)[0]
 
-    
-
-def intersection(x1: List[float], y1: List[float], x2: List[float], y2: List[float]) -> dict:
+def intersection(x1: Sequence[float], y1: Sequence[float], x2: Sequence[float], y2: Sequence[float]) -> Tuple[float, float] | None:
     """
     Finds the intersections of two discretized curves
     """
@@ -70,7 +68,7 @@ def intersection(x1: List[float], y1: List[float], x2: List[float], y2: List[flo
 
     if indexes.size == 0:
         return None
-    
+
     index = indexes[0]
 
     inv_linear_matrix = np.linalg.inv(
@@ -81,7 +79,7 @@ def intersection(x1: List[float], y1: List[float], x2: List[float], y2: List[flo
     )
     func_1_line = np.matmul(
         inv_linear_matrix,
-        [y1_interpolation[index], y1_interpolation[index + 1]]    
+        [y1_interpolation[index], y1_interpolation[index + 1]]
     )
     func_2_line = np.matmul(
         inv_linear_matrix,
@@ -97,9 +95,4 @@ def intersection(x1: List[float], y1: List[float], x2: List[float], y2: List[flo
         [-func_1_line[0], -func_2_line[0]]
     )
 
-    return {
-        'x' : intersection_coordinates[0],
-        'y' : intersection_coordinates[1]
-    }
-
-
+    return intersection_coordinates[0], intersection_coordinates[1]

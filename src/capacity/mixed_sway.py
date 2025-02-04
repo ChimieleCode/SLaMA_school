@@ -24,7 +24,7 @@ def mixed_sidesway(
     Returns:
         Capacity: capacity curve of the building
     """
-    sub_capacities = [0] * frame.get_node_count()
+    sub_capacities = [{}] * frame.get_node_count()
     for vertical in range(frame.verticals):
         subassembly_id = frame.get_node_id(
                 floor=0,
@@ -33,20 +33,20 @@ def mixed_sidesway(
         subassembly = sub_factory.get_subassembly(
             subassembly_id
         )
-
+        assert subassembly.above_column is not None
         sub_capacities[subassembly_id] = {
             'moment' : subassembly.above_column.moment_rotation(
                 direction=direction,
                 axial=subassembly.axial
-            )['moment'][-1],
+            ).mom_c,
             'yielding' : subassembly.above_column.moment_rotation(
                 direction=direction,
                 axial=subassembly.axial
-            )['rotation'][0],
+            ).rot_y,
             'ultimate' : subassembly.above_column.moment_rotation(
                 direction=direction,
                 axial=subassembly.axial
-            )['rotation'][-1]
+            ).rot_c
         }
 
     # Subassemblies
@@ -56,9 +56,9 @@ def mixed_sidesway(
         )
 
         sub_capacities[sub_id] = {
-            'moment' : subassembly.get_hierarchy(direction=direction)['beam_equivalent'],
-            'yielding' : subassembly.get_hierarchy(direction=direction)['rotation_yielding'],
-            'ultimate' : subassembly.get_hierarchy(direction=direction)['rotation_ultimate']
+            'moment' : subassembly.get_hierarchy(direction=direction).beam_eq,
+            'yielding' : subassembly.get_hierarchy(direction=direction).rot_y,
+            'ultimate' : subassembly.get_hierarchy(direction=direction).rot_c
         }
 
     delta_axials = np.zeros(frame.get_node_count())
@@ -92,13 +92,15 @@ def mixed_sidesway(
     yielding_frame_rotation = min([sub_data['yielding'] for sub_data in sub_capacities])
 
     capacity = {
-        'name' : 'Mixed Sidesway',
-        'mass' : frame.get_effective_mass(),
-        'base_shear' : [overturning_moment / frame.forces_effective_height] * 2,
-        'disp' : [
+
+    }
+    return FrameCapacity(
+        name='Mixed Sidesway',
+        mass=frame.get_effective_mass(),
+        base_shear=[overturning_moment / frame.forces_effective_height] * 2,
+        disp=[
             yielding_frame_rotation * frame.forces_effective_height,
             ultimate_frame_rotation * frame.forces_effective_height
         ]
-    }
-    return FrameCapacity(**capacity)
+    )
 
