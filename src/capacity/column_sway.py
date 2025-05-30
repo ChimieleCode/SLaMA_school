@@ -57,8 +57,9 @@ def column_sidesway(
     return FrameCapacity(
         name='Column Sidesway',
         mass=frame.get_effective_mass(),
-        base_shear=[overturning_moment / H_eff] * 2,
+        base_shear=[0.] + [overturning_moment / H_eff] * 2,
         disp=[
+            0.,
             yielding_rotation * first_floor_height,
             ultimate_rotation * first_floor_height
         ]

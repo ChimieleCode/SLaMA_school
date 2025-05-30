@@ -1,6 +1,7 @@
 from pydantic import BaseModel, validator
 from typing import List
 
+
 class Regular2DFrameInput(BaseModel):
     """
     Validator data model for structural frame
@@ -8,12 +9,12 @@ class Regular2DFrameInput(BaseModel):
     Input is validated to make sure that the defined
     frame is consistent
     """
-    L       : List[float]
-    H       : List[float]
-    m       : List[float]
-    loads   : List[float]
-    columns : List[List[int]]
-    beams   : List[List[int]]
+    L       : list[float]
+    H       : list[float]
+    m       : list[float]
+    loads   : list[float]
+    columns : list[list[int]]
+    beams   : list[list[int]]
 
     class Config:
         frozen = True
@@ -47,7 +48,7 @@ class Regular2DFrameInput(BaseModel):
     def loads_must_match_nodes(cls, value, values):
         nodes = (len(values['H']) + 1) * len(values['L'])
         if len(value) != nodes:
-            raise ValueError('loads values must match number of nodes')
+            raise ValueError(f'loads values must match number of nodes \nexpected: {nodes}, got: {len(value)}')
         return value
         # ignorare il piano terra e aggiungere 0 al pian terreno [0.] * len(values['L'])
 

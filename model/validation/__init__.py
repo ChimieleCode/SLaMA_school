@@ -2,3 +2,4 @@ from .frame_input import Regular2DFrameInput
 from .material_validation import SimpleMaterialInput
 from .section_model import BasicSectionCollectionInput
 from .hazard_input import NTC2018HazardInput
+from .input_validation import MultiFrameIput

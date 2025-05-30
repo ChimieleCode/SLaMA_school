@@ -97,8 +97,9 @@ def mixed_sidesway(
     return FrameCapacity(
         name='Mixed Sidesway',
         mass=frame.get_effective_mass(),
-        base_shear=[overturning_moment / frame.forces_effective_height] * 2,
+        base_shear=[0.] + [overturning_moment / frame.forces_effective_height] * 2,
         disp=[
+            0.,
             yielding_frame_rotation * frame.forces_effective_height,
             ultimate_frame_rotation * frame.forces_effective_height
         ]
