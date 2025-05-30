@@ -1,0 +1,9 @@
+{
+    "ag" : 0.075,
+    "F0" : 2.499,
+    "Tc_star" : 0.288,
+    "Cu" : 1,
+    "Vn" : 50,
+    "soil_category" : "C",
+    "topographic_category" : "T1"
+}

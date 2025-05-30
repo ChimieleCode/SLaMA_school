@@ -1,65 +1,66 @@
+from pathlib import Path
 
-from src.utils import import_from_json
-
-from model.validation.frame_input import Regular2DFrameInput
-from model.validation.section_model import BasicSectionCollectionInput
-from model.validation.material_validation import SimpleMaterialInput
-from src.steel.steel import Steel
-from src.concrete.concrete import Concrete
-from src.collections.section_collection import SectionCollection
+from model.enums import Direction, ElementType
+from model.validation import (Regular2DFrameInput, BasicSectionCollectionInput,
+                              SimpleMaterialInput, NTC2018HazardInput)
+from src.steel import Steel   # does not see the package
+from src.concrete import Concrete
 from src.sections.basic_section import BasicSection
-from src.frame.regular_frame import RegularFrameBuilder
+from src.frame import RegularFrameBuilder
 from src.elements.basic_element import BasicElement
 from src.subassembly import SubassemblyFactory
-from src.collections.subassembly_collection import SubassemblyCollection
+from src.hazard import NTC2018SeismicHazard
+from src.frame.regular_frame import RegularFrame
+
+from src.scripts import convert_to_section_collection
+from src.utils import export_to_json, import_from_json
+from src.performance import compute_ISV, compute_ISD
+from src.capacity import (column_sidesway, beam_sidesway, mixed_sidesway,
+                          mixed_sidesway_sub_stiff, damaged_sidesway_sub_stiff, damaged_mixed_sidesway)
+
 
 def main():
-    """Main process."""
+    """
+    Main process
+    """
+    # -o-o-o-o-o- IMPORT AND VALIDATION -o-o-o-o-o-
+
     # Import frame data
-    frame_dct = import_from_json('.\Inputs\Frame.json')
+    frame_dct = import_from_json(Path('./Inputs/Frame.json'))
+    # print(frame_dct)
     # Validate frame data
     validated_frame = Regular2DFrameInput(
         **frame_dct
     )
 
     # Import section data
-    sections_dct = import_from_json('.\Inputs\Sections.json')
+    sections_dct = import_from_json(Path('./Inputs/Sections.json'))
     # validate section data
     validated_sections = BasicSectionCollectionInput(
         **sections_dct
     )
 
     # Import material data
-    materials_dct = import_from_json('.\Inputs\Materials.json')
+    materials_dct = import_from_json(Path('./Inputs/Materials.json'))
     # Validate material data
     validated_materials = SimpleMaterialInput(
         **materials_dct
     )
 
+    # -o-o-o-o-o- MODEL BUILDING -o-o-o-o-o-
+
     # Instansiate material objects
     steel = Steel(**validated_materials.steel.__dict__)
     concrete = Concrete(**validated_materials.concrete.__dict__)
 
-    # Instanciate Section Data
-    sections = SectionCollection()
-    sections.reset()
+    # Instanciate Section Data and visitors
+    sections = convert_to_section_collection(
+        validated_sections,
+        concrete,
+        steel,
+        section_type=BasicSection
+    )
 
-    for validated_section in validated_sections.beams:
-        section = BasicSection(
-            section_data=validated_section, 
-            concrete=concrete, 
-            steel=steel
-        )
-        sections.add_beam_section(section)
-
-    for validated_section in validated_sections.columns:
-        section = BasicSection(
-            section_data=validated_section, 
-            concrete=concrete, 
-            steel=steel
-            )
-        sections.add_column_section(section)
-    
     # Build frame model
     frame_builder = RegularFrameBuilder(
         frame_data=validated_frame,
@@ -71,14 +72,124 @@ def main():
 
     # Get subassemblies
     subassemly_factory = SubassemblyFactory(frame=frame)
-    subassemblies = SubassemblyCollection()
 
-    for node in frame.get_nodes():
-        subassemblies.add_subassembly(
-            subassemly_factory.get_subassembly(node)
+    # -o-o-o-o-o- COMPUTE CAPACIIES -o-o-o-o-o-
+
+    # print(frame.get_effective_mass())
+
+    # Compute capacity
+    beam_SLaMA = beam_sidesway(
+        sub_factory=subassemly_factory,
+        frame=frame
+    )
+    # print(beam_SLaMA)
+    column_SLaMA = column_sidesway(
+        sub_factory=subassemly_factory,
+        frame=frame
+    )
+    # print(column_SLaMA)
+    classic_SLaMA = mixed_sidesway(
+        sub_factory=subassemly_factory,
+        frame=frame
+    )
+
+    export_subassemblies_as_csv(
+        Path('outputs/subassemplies.csv'),
+        subassemly_factory,
+        frame
+    )
+    print('Classic:', classic_SLaMA, '\n')
+    print('Beam:', beam_SLaMA, '\n')
+    print('Column:', column_SLaMA, '\n')
+    print(frame.forces_effective_height)
+    print(frame.get_delta_axial(7))
+
+
+
+def get_subassemby_hierarchy(sub_factory: SubassemblyFactory, frame: RegularFrame) -> dict[int, ElementType]:
+    """
+    Gets the subassembly mechcanism data
+
+    Args:
+        sub_factory (SubassemblyFactory): subassembly factory
+        frame (RegularFrame): frame object
+
+    Returns:
+        dict[int: ElementType]: list of sub critical elements
+    """
+    mechanisms = {}
+
+    for sub_id in range(frame.verticals, frame.get_node_count()):
+        subassembley = sub_factory.get_subassembly(sub_id)
+        mechanisms[sub_id] = subassembley.get_hierarchy()
+
+    return mechanisms
+
+
+def export_subassemblies_as_csv(path: Path,
+                                subassemly_factory: SubassemblyFactory,
+                                frame: RegularFrame):
+    import csv
+
+    subs = get_mixed_sidesway_capacities(subassemly_factory, frame)
+    header = ['sub', 'M', 'y', 'u', 'el']
+
+    data = zip(
+        range(frame.get_node_count()),
+        [sub['moment'] for sub in subs],
+        [sub['yielding'] for sub in subs],
+        [sub['ultimate'] for sub in subs],
+        [sub['element'] for sub in subs]
+    )
+
+    with open(path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+
+        writer.writerow(header)
+        writer.writerows(data)
+
+
+def get_mixed_sidesway_capacities(sub_factory: SubassemblyFactory, frame: RegularFrame, direction: Direction = Direction.Positive):
+
+    sub_capacities = [{}] * frame.get_node_count()
+    for vertical in range(frame.verticals):
+        subassembly_id = frame.get_node_id(
+                floor=0,
+                vertical=vertical
+            )
+        subassembly = sub_factory.get_subassembly(subassembly_id)
+        assert subassembly.above_column is not None
+        sub_capacities[subassembly_id] = {
+            'moment' : subassembly.above_column.moment_rotation(
+                direction=direction,
+                axial=subassembly.axial
+            ).mom_c,
+            'yielding' : subassembly.above_column.moment_rotation(
+                direction=direction,
+                axial=subassembly.axial
+            ).rot_y,
+            'ultimate' : subassembly.above_column.moment_rotation(
+                direction=direction,
+                axial=subassembly.axial
+            ).rot_c,
+            'element' : ElementType.Column
+        }
+
+    # Subassemblies
+    for sub_id in range(frame.verticals, frame.get_node_count()):
+        subassembly = sub_factory.get_subassembly(
+            sub_id
         )
 
-    
+        sub_capacities[sub_id] = {
+            'moment' : subassembly.get_hierarchy(direction=direction).beam_eq,
+            'yielding' : subassembly.get_hierarchy(direction=direction).rot_y,
+            'ultimate' : subassembly.get_hierarchy(direction=direction).rot_c,
+            'element' : subassembly.get_hierarchy(direction=direction).weakest
+        }
+
+    return sub_capacities
+
 # Profile Mode
 if __name__ == '__main__':
     import cProfile
@@ -88,5 +199,6 @@ if __name__ == '__main__':
         main()
 
     stats = pstats.Stats(pr)
-    stats.sort_stats(pstats.SortKey.TIME)
-    stats.print_stats()
+    # stats.sort_stats(pstats.SortKey.TIME).print_stats()
+
+
