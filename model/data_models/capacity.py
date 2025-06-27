@@ -26,6 +26,21 @@ class FrameCapacity:
             base_shear=[bs * other for bs in self.base_shear]
         )
     
+    def to_dict(self) -> dict:
+        """
+        Converts the FrameCapacity instance to a dictionary.
+        
+        Returns:
+            dict: A dictionary representation of the FrameCapacity instance.
+        """
+        return {
+            'name': self.name,
+            'mass': self.mass,
+            'curve': list(
+                (d, s) for d, s in zip(self.disp, self.base_shear)
+            )
+        }
+    
     def __add__(self, other: 'FrameCapacity') -> 'FrameCapacity':
         """
         Adds another FrameCapacity instance to this one.

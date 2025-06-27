@@ -71,7 +71,7 @@ def main(
             validated_materials=validated_material,
             mechanism=mixed_sidesway,
             sub_export_path=export_subs_folder / f'cross_frame_{i}.csv' if export_subs_folder else None
-        )
+        ) 
         # scale the capacity curve by the count
         capacity_curve *= count
 
@@ -85,8 +85,8 @@ def main(
         output_path,
         {
             'tag': validated_input.tag,
-            'main_capacity': main_capacity.__dict__,
-            'cross_capacity': cross_capacity.__dict__,
+            'main_capacity': main_capacity.to_dict(),
+            'cross_capacity': cross_capacity.to_dict(),
             'masses': validated_input.masses
         }
     )
