@@ -1,5 +1,7 @@
 from typing import List
-from pydantic import BaseModel, validator
+
+from pydantic import BaseModel, field_validator
+
 
 class BasicSectionInput(BaseModel):
     """
@@ -17,17 +19,17 @@ class BasicSectionInput(BaseModel):
 
     class Config:
         frozen = True
-        
+
 
 class BasicSectionCollectionInput(BaseModel):
     columns : List[BasicSectionInput]
     beams   : List[BasicSectionInput]
 
-    @validator('columns', 'beams')
+    @field_validator('columns', 'beams')
     def section_id_no_duplicates(cls, value):
         section_id_set = set()
         for section in value:
-            section_id_set.add(section.id) 
+            section_id_set.add(section.id)
         if len(section_id_set) != len(value):
             raise ValueError('different sections have the same id, the section id must be unique')
         return value

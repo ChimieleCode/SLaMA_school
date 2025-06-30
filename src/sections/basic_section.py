@@ -1,15 +1,15 @@
 import math
-import numpy as np
-import model.config as config
 from functools import cache
 
-from model.validation.section_model import BasicSectionInput
-from model.enums import Direction, SectionType
-from src.concrete import Concrete
-from src.steel.steel import Steel
-from src.sections import MNDomain, Section, MomentCurvature, ShearEnvelope
-from src.utils import import_configuration
+import numpy as np
 
+import model.config as config
+from model.enums import Direction, SectionType
+from model.validation.section_model import BasicSectionInput
+from src.concrete import Concrete
+from src.sections import MNDomain, MomentCurvature, Section, ShearEnvelope
+from src.steel.steel import Steel
+from src.utils import import_configuration
 
 # Import config data
 cfg : config.MNINTConfig
@@ -247,7 +247,7 @@ def analytic_moment_curvature(section_data: BasicSectionInput,
         steel_tension_top = es_top * E_s
 
     # if bottom does not yield, negative because in traction
-    if es_bot < -ey_s:
+    if abs(es_bot) < ey_s:
         print('WARNING CLASS 4 FRAGILE NOT IMPLEMENTED')
         steel_tension_bot = -fy_s
     else:

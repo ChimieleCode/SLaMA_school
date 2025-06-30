@@ -1,7 +1,8 @@
-from pydantic import BaseModel
-from typing import Any
 from enum import Enum
 from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel
 
 CONFIG_PATH = Path('./src/conf/config.yaml')
 
@@ -51,7 +52,6 @@ class NodesConfig(BaseModel):
 
 class ElementConfig(BaseModel):
     moment_curvature : MomentCurvatureAlg
-    moment_shear_interaction : bool
     shear_formulation : ShearFormula
     domain_mn : DomainMNAlg
 
@@ -63,4 +63,3 @@ class MNINTConfig(BaseModel):
     nodes: NodesConfig
     element_settings: ElementConfig
     subassembly_settings: SubassemblyConfig
-

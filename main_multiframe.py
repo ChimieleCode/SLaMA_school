@@ -1,32 +1,29 @@
-from pathlib import Path
-import csv
 import argparse
+import csv
+from pathlib import Path
 from typing import Callable
 
-from model.enums import Direction, ElementType
-from model.validation import (Regular2DFrameInput, BasicSectionCollectionInput,
-                              SimpleMaterialInput, NTC2018HazardInput, MultiFrameIput)
 from model.data_models import FrameCapacity
-from src.steel import Steel   # does not see the package
+from model.enums import Direction, ElementType
+from model.validation import (BasicSectionCollectionInput, MultiFrameIput,
+                              Regular2DFrameInput, SimpleMaterialInput)
+from src.capacity import mixed_sidesway
 from src.concrete import Concrete
-from src.sections.basic_section import BasicSection
-from src.frame import RegularFrameBuilder
 from src.elements.basic_element import BasicElement
-from src.subassembly import SubassemblyFactory
-from src.hazard import NTC2018SeismicHazard
+from src.frame import RegularFrameBuilder
 from src.frame.regular_frame import RegularFrame
-
 from src.scripts import convert_to_section_collection
+from src.sections.basic_section import BasicSection
+from src.steel import Steel  # does not see the package
+from src.subassembly import SubassemblyFactory
 from src.utils import export_to_json, import_from_json
-from src.performance import compute_ISV, compute_ISD
-from src.capacity import (column_sidesway, beam_sidesway, mixed_sidesway,
-                          mixed_sidesway_sub_stiff, damaged_sidesway_sub_stiff, damaged_mixed_sidesway)
 
 
 def main(
-        input_path: Path, 
+        input_path: Path,
         output_path: Path,
-        export_subs_folder: Path | None = None
+        export_subs_folder: Path | None = None,
+        consider_shear: bool = True
     ):
     """
     Main process
@@ -39,9 +36,9 @@ def main(
         **input_file_dct
     )
 
-    # Pass validated sections and materials 
+    # Pass validated sections and materials
     validated_material = validated_input.materials
-    validated_sections = validated_input.sections   
+    validated_sections = validated_input.sections
 
     # Main
     main_capacity_curves: list[FrameCapacity] = []
@@ -51,7 +48,8 @@ def main(
             validated_frame=frame,
             validated_materials=validated_material,
             mechanism=mixed_sidesway,
-            sub_export_path=export_subs_folder / f'main_frame_{i}.csv' if export_subs_folder else None
+            sub_export_path=export_subs_folder / f'main_frame_{i}.csv' if export_subs_folder else None,
+            consider_shear=consider_shear
         )
         # scale the capacity curve by the count
         capacity_curve *= count
@@ -60,7 +58,7 @@ def main(
 
     main_capacity = main_capacity_curves[0]
     for curve in main_capacity_curves[1:]:
-        main_capacity += curve 
+        main_capacity += curve
 
     # Cross
     cross_capacity_curves: list[FrameCapacity] = []
@@ -70,8 +68,9 @@ def main(
             validated_frame=frame,
             validated_materials=validated_material,
             mechanism=mixed_sidesway,
-            sub_export_path=export_subs_folder / f'cross_frame_{i}.csv' if export_subs_folder else None
-        ) 
+            sub_export_path=export_subs_folder / f'cross_frame_{i}.csv' if export_subs_folder else None,
+            consider_shear=consider_shear
+        )
         # scale the capacity curve by the count
         capacity_curve *= count
 
@@ -79,7 +78,7 @@ def main(
 
     cross_capacity = cross_capacity_curves[0]
     for curve in cross_capacity_curves[1:]:
-        cross_capacity += curve 
+        cross_capacity += curve
 
     return export_to_json(
         output_path,
@@ -97,9 +96,10 @@ def compute_capacity_curve(
         validated_frame: Regular2DFrameInput,
         validated_materials: SimpleMaterialInput,
         mechanism: Callable[..., FrameCapacity],
-        sub_export_path: Path | None = None
+        sub_export_path: Path | None = None,
+        consider_shear: bool = True
 ) -> FrameCapacity:
-    
+
     # Instansiate material objects
     steel = Steel(**validated_materials.steel.__dict__)
     concrete = Concrete(**validated_materials.concrete.__dict__)
@@ -129,9 +129,10 @@ def compute_capacity_curve(
     # Compute capacity
     capacity_curve = mechanism(
         sub_factory=subassemly_factory,
-        frame=frame
+        frame=frame,
+        consider_shear_iteraction=consider_shear
     )
-    
+
     if sub_export_path is not None:
         # Ths does not work now
         export_subassemblies_as_csv(
@@ -141,7 +142,7 @@ def compute_capacity_curve(
         )
 
     return capacity_curve
-    
+
 
 def get_subassemby_hierarchy(sub_factory: SubassemblyFactory, frame: RegularFrame) -> dict[int, ElementType]:
     """
@@ -228,17 +229,16 @@ def get_mixed_sidesway_capacities(sub_factory: SubassemblyFactory, frame: Regula
 
 # Profile Mode
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Process frame analysis inputs and outputs.")
+    parser = argparse.ArgumentParser(description='Process frame analysis inputs and outputs.')
     parser.add_argument('--input', type=Path, required=True, help='Path to input JSON file')
     parser.add_argument('--output', type=Path, required=True, help='Path to output JSON file')
+    parser.add_argument('--consider_shear', action='store_true', help='Boolean flag to consider shear interaction')
     parser.add_argument('--subs', type=Path, required=False, help='Optional path to export subassemblies as CSV')
 
     args = parser.parse_args()
 
     main(
         input_path=Path(args.input),
-        output_path=Path(args.output)
+        output_path=Path(args.output),
+        consider_shear=args.consider_shear
     )
-
-
-

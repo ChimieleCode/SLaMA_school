@@ -1,7 +1,7 @@
 nodes:
   tension_kj_values:
     internal: 0.8
-    external: 0.2
+    external: 0.42
     top_internal: 0.42
     top_external: 0.42
     base: null
@@ -15,18 +15,16 @@ nodes:
   cracking_rotation: 0.0002
 element_settings:
   moment_curvature: 'stress_block'
-  # 'stress_block' analytical formulation using stress block for concrete compression 
-  moment_shear_interaction: True
-  # 'True/False' consider fragile shear failures
+  # 'stress_block' analytical formulation using stress block for concrete compression
   shear_formulation: 'NZSEE2017'
   # 'NZSEE2017' shear formulation proposed in NZSEE2017 C5
   domain_mn: 'four_points'
   # 'four_points' domain MN computed for 4 points (traction, compression, balanced and limit)
 subassembly_settings:
-  sub_hierarchy: 'low'
+  sub_hierarchy: 'avg'
   # 'low' considers only the first element to break for both moment and rotations
   # 'avg' considers the combined capacity of both elements and the average of the yielding points
   # 'tot' considers the combined capacity of both elements and the lowest of the yielding points
-  sub_stiffness: 'low'
+  sub_stiffness: 'avg'
   # 'low' considers as the lowest stiffness for the critical elements
   # 'avg' considers the correct stifness of all the elements

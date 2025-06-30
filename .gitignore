@@ -133,6 +133,8 @@ dmypy.json
 testfile.py
 
 # Custom Outputs
+.idea
+.vscode
 Graphs
 OLD_Inputs
 batch_exec.py

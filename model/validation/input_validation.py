@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
+from model.validation.frame_input import Regular2DFrameInput
 from model.validation.material_validation import SimpleMaterialInput
 from model.validation.section_model import BasicSectionCollectionInput
-from model.validation.frame_input import Regular2DFrameInput
 
 
 class FrameGrid(BaseModel):
@@ -17,7 +17,7 @@ class MultiFrameIput(BaseModel):
     """
     Validator data model for multi-frame input
     """
-    tag: str
+    tag: int
     materials: SimpleMaterialInput
     sections: BasicSectionCollectionInput
     frames: FrameGrid

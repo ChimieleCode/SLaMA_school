@@ -1,10 +1,9 @@
+import numpy as np
+
+from model.data_models import FrameCapacity
 from model.enums import Direction
 from src.frame.regular_frame import RegularFrame
 from src.subassembly import SubassemblyFactory
-from model.data_models import FrameCapacity
-
-from itertools import product
-import numpy as np
 
 # Usefull constants
 G = 9.81
@@ -12,7 +11,8 @@ G = 9.81
 def mixed_sidesway(
     sub_factory: SubassemblyFactory,
     frame: RegularFrame,
-    direction: Direction=Direction.Positive) -> FrameCapacity:
+    direction: Direction=Direction.Positive,
+    consider_shear_iteraction: bool = True) -> FrameCapacity:
     """
     Computes the mixed sidesway of a frame
 
@@ -34,19 +34,17 @@ def mixed_sidesway(
             subassembly_id
         )
         assert subassembly.above_column is not None
+
+        # moment rotation
+        sub_result = subassembly.above_column.moment_rotation(
+            direction=direction,
+            axial=subassembly.axial,
+            consider_shear_iteraction=consider_shear_iteraction
+        )
         sub_capacities[subassembly_id] = {
-            'moment' : subassembly.above_column.moment_rotation(
-                direction=direction,
-                axial=subassembly.axial
-            ).mom_c,
-            'yielding' : subassembly.above_column.moment_rotation(
-                direction=direction,
-                axial=subassembly.axial
-            ).rot_y,
-            'ultimate' : subassembly.above_column.moment_rotation(
-                direction=direction,
-                axial=subassembly.axial
-            ).rot_c
+            'moment' : sub_result.mom_c,
+            'yielding' : sub_result.rot_y,
+            'ultimate' : sub_result.rot_c
         }
 
     # Subassemblies
@@ -55,10 +53,15 @@ def mixed_sidesway(
             sub_id
         )
 
+        # Capacity
+        sub_hierarchy = subassembly.get_hierarchy(
+            direction=direction,
+            consider_shear_interaction=consider_shear_iteraction
+        )
         sub_capacities[sub_id] = {
-            'moment' : subassembly.get_hierarchy(direction=direction).beam_eq,
-            'yielding' : subassembly.get_hierarchy(direction=direction).rot_y,
-            'ultimate' : subassembly.get_hierarchy(direction=direction).rot_c
+            'moment' : sub_hierarchy.beam_eq,
+            'yielding' : sub_hierarchy.rot_y,
+            'ultimate' : sub_hierarchy.rot_c
         }
 
     delta_axials = np.zeros(frame.get_node_count())
@@ -104,4 +107,3 @@ def mixed_sidesway(
             ultimate_frame_rotation * frame.forces_effective_height
         ]
     )
-
