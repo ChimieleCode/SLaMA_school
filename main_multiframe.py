@@ -1,5 +1,7 @@
 import argparse
 import csv
+from enum import Enum
+from functools import partial
 from pathlib import Path
 from typing import Callable
 
@@ -7,7 +9,7 @@ from model.data_models import FrameCapacity
 from model.enums import Direction, ElementType
 from model.validation import (BasicSectionCollectionInput, MultiFrameIput,
                               Regular2DFrameInput, SimpleMaterialInput)
-from src.capacity import mixed_sidesway
+from src.capacity import beam_sidesway, column_sidesway, mixed_sidesway
 from src.concrete import Concrete
 from src.elements.basic_element import BasicElement
 from src.frame import RegularFrameBuilder
@@ -23,7 +25,7 @@ def main(
         input_path: Path,
         output_path: Path,
         export_subs_folder: Path | None = None,
-        consider_shear: bool = True
+        mechanism: Callable[..., FrameCapacity] = mixed_sidesway
     ):
     """
     Main process
@@ -47,9 +49,8 @@ def main(
             validated_sections=validated_sections,
             validated_frame=frame,
             validated_materials=validated_material,
-            mechanism=mixed_sidesway,
-            sub_export_path=export_subs_folder / f'main_frame_{i}.csv' if export_subs_folder else None,
-            consider_shear=consider_shear
+            mechanism=mechanism,
+            sub_export_path=export_subs_folder / f'main_frame_{i}.csv' if export_subs_folder else None
         )
         # scale the capacity curve by the count
         capacity_curve *= count
@@ -67,9 +68,8 @@ def main(
             validated_sections=validated_sections,
             validated_frame=frame,
             validated_materials=validated_material,
-            mechanism=mixed_sidesway,
-            sub_export_path=export_subs_folder / f'cross_frame_{i}.csv' if export_subs_folder else None,
-            consider_shear=consider_shear
+            mechanism=mechanism,
+            sub_export_path=export_subs_folder / f'cross_frame_{i}.csv' if export_subs_folder else None
         )
         # scale the capacity curve by the count
         capacity_curve *= count
@@ -96,8 +96,7 @@ def compute_capacity_curve(
         validated_frame: Regular2DFrameInput,
         validated_materials: SimpleMaterialInput,
         mechanism: Callable[..., FrameCapacity],
-        sub_export_path: Path | None = None,
-        consider_shear: bool = True
+        sub_export_path: Path | None = None
 ) -> FrameCapacity:
 
     # Instansiate material objects
@@ -129,8 +128,7 @@ def compute_capacity_curve(
     # Compute capacity
     capacity_curve = mechanism(
         sub_factory=subassemly_factory,
-        frame=frame,
-        consider_shear_iteraction=consider_shear
+        frame=frame
     )
 
     if sub_export_path is not None:
@@ -227,18 +225,39 @@ def get_mixed_sidesway_capacities(sub_factory: SubassemblyFactory, frame: Regula
 
     return sub_capacities
 
+
+class MechanismType(Enum):
+    MixedSidesway = 'mixed_sidesway'
+    NoShearSway = 'no_shear_sidesway'
+    ColumnSidesway = 'column_sidesway'
+    BeamSidesway = 'beam_sidesway'
+
+    def get_mechanism(self) -> Callable[..., FrameCapacity]:
+        """
+        Returns the mechanism function associated with the enum value.
+        """
+        MECHANISM_MAP = {
+            MechanismType.MixedSidesway: partial(mixed_sidesway, consider_shear_interaction=True),
+            MechanismType.NoShearSway: partial(mixed_sidesway, consider_shear_interaction=False),
+            MechanismType.ColumnSidesway: column_sidesway,
+            MechanismType.BeamSidesway: beam_sidesway
+        }
+        return MECHANISM_MAP[self]
+
+
 # Profile Mode
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process frame analysis inputs and outputs.')
     parser.add_argument('--input', type=Path, required=True, help='Path to input JSON file')
     parser.add_argument('--output', type=Path, required=True, help='Path to output JSON file')
-    parser.add_argument('--consider_shear', action='store_true', help='Boolean flag to consider shear interaction')
     parser.add_argument('--subs', type=Path, required=False, help='Optional path to export subassemblies as CSV')
+    parser.add_argument('--mechanism', type=str, choices=[m.value for m in MechanismType], default='mixed_sidesway',
+                        help='Mechanism to use for capacity calculation')
 
     args = parser.parse_args()
 
     main(
         input_path=Path(args.input),
         output_path=Path(args.output),
-        consider_shear=args.consider_shear
+        mechanism=MechanismType(args.mechanism).get_mechanism()
     )

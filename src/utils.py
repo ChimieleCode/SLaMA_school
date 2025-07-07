@@ -1,11 +1,12 @@
 import json
-from pyparsing import Any
-import yaml
 from pathlib import Path
-from typing import Callable, List, Sequence, Tuple
+from typing import Callable, Literal, Sequence, Tuple
+
 import numpy as np
+import yaml
+from pyparsing import Any
 from scipy.interpolate import interp1d
-from scipy.optimize import fsolve
+from scipy.optimize import root_scalar
 
 
 def import_from_json(filepath: Path) -> dict:
@@ -45,12 +46,33 @@ def import_configuration(config_path: Path, object_hook = None) -> Any:
 def analytical_intersection(
     initial_guess: float,
     function_1: Callable[[float], float],
-    function_2: Callable[[float], float]) -> float:
+    function_2: Callable[[float], float],
+    sign: Literal[1, -1, 0] = 0,
+    bracket_size: float = 1e5) -> float:
     """
     Finds the closest intersection between two curves
     """
-    difference_function = lambda x: function_1(x) - function_2(x)
-    return fsolve(difference_function, initial_guess)[0]
+    if sign in (-1, 1):
+        start = initial_guess
+        end = initial_guess + sign * bracket_size
+        bracket = [min(start, end), max(start, end)]
+    else:
+        bracket = [initial_guess - bracket_size, initial_guess + bracket_size]
+
+    def diff(x):
+        return function_1(x) - function_2(x)
+
+    result = root_scalar(diff, x0=initial_guess, bracket=bracket, method='brentq')
+
+    if result.converged:
+        x = result.root
+        y = function_1(x)
+        if y >= 0:
+            return x
+        else:
+            raise ValueError('Intersection found but y < 0')
+    else:
+        raise RuntimeError('Root finding did not converge')
 
 def intersection(x1: Sequence[float], y1: Sequence[float], x2: Sequence[float], y2: Sequence[float]) -> Tuple[float, float] | None:
     """

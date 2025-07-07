@@ -11,8 +11,8 @@ G = 9.81
 def mixed_sidesway(
     sub_factory: SubassemblyFactory,
     frame: RegularFrame,
-    direction: Direction=Direction.Positive,
-    consider_shear_iteraction: bool = True) -> FrameCapacity:
+    direction: Direction = Direction.Positive,
+    consider_shear_interaction: bool = True) -> FrameCapacity:
     """
     Computes the mixed sidesway of a frame
 
@@ -39,7 +39,7 @@ def mixed_sidesway(
         sub_result = subassembly.above_column.moment_rotation(
             direction=direction,
             axial=subassembly.axial,
-            consider_shear_iteraction=consider_shear_iteraction
+            consider_shear_iteraction=consider_shear_interaction
         )
         sub_capacities[subassembly_id] = {
             'moment' : sub_result.mom_c,
@@ -56,7 +56,7 @@ def mixed_sidesway(
         # Capacity
         sub_hierarchy = subassembly.get_hierarchy(
             direction=direction,
-            consider_shear_interaction=consider_shear_iteraction
+            consider_shear_interaction=consider_shear_interaction
         )
         sub_capacities[sub_id] = {
             'moment' : sub_hierarchy.beam_eq,

@@ -1,16 +1,16 @@
 {
-    "concrete": {
-        "id": "C14",
-        "fc": 16000.0,
-        "E": 25186010.36,
-        "epsilon_0": 0.0007,
-        "epsilon_u": 0.0035
-    },
-    "steel": {
-        "id": "Fe430",
-        "fy": 392000.0,
-        "fu": 420000.0,
-        "E": 210000000,
-        "epsilon_u": 0.06
+        "concrete": {
+            "id": "C25 Del Gaudio et al. 2015",
+            "fc": 25000.0,
+            "E": 28960000.0,
+            "epsilon_0": 0.0007,
+            "epsilon_u": 0.0035
+        },
+        "steel": {
+            "id": "FE B 38 k Del Gaudio et al. 2015",
+            "fy": 466000.0,
+            "fu": 650000.0,
+            "E": 210000000,
+            "epsilon_u": 0.14
+        }
     }
-}

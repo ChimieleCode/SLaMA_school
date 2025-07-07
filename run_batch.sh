@@ -1,6 +1,6 @@
 #!/bin/bash
 
-input_dir="Inputs"
+input_dir="inputs"
 output_dir="outputs"
 
 mkdir -p "$output_dir"

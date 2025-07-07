@@ -601,8 +601,10 @@ def average_hierarchy(subassembly: Subassembly,
     column_capacity_axial = analytical_intersection(
         subassembly.axial,
         function_1=_column_capacity,
-        function_2=_delta_axial_curve
+        function_2=_delta_axial_curve,
+        sign=int(subassembly.downwind) - int(subassembly.upwind)    #type: ignore[reportArgumentType]
     )
+
     beam_capacity_axial = analytical_intersection(
         subassembly.axial,
         function_1=_beam_capacity,
