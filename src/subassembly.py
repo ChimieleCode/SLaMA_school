@@ -852,18 +852,15 @@ def get_total_stiffness(subassembly: Subassembly,
     joint_rotation = cfg.nodes.cracking_rotation
 
     # Initialize the stifness data including joint value and lower column
+    assert subassembly.below_column is not None
+    below_column_mom_rot = subassembly.below_column.moment_rotation(
+        counter_direction,
+        axial=subassembly.axial
+    )
+    # Joint rotation is the same for both directions
     stiffnesses = {
         'beam' : 0,
-        'column' : (
-            subassembly.below_column.moment_rotation(
-                counter_direction,
-                axial=subassembly.axial
-                ).mom_y
-            / subassembly.below_column.moment_rotation(
-                counter_direction,
-                axial=subassembly.axial
-            ).rot_y
-        ),
+        'column' : below_column_mom_rot.mom_y / below_column_mom_rot.rot_y,
         'joint' : subassembly.domain_MN(subassembly.axial)/joint_rotation
     }
     # This will be needed to convert moments from column equivalent to beam equivalent
@@ -872,34 +869,41 @@ def get_total_stiffness(subassembly: Subassembly,
 
     # Updates beams' stiffness factor with left beam stiffness (if present)
     if subassembly.left_beam is not None:
+        left_beam_mom_rot = subassembly.left_beam.moment_rotation(
+            counter_direction,
+            axial=subassembly.axial
+        )
         stiffnesses['beam'] += (
-            subassembly.left_beam.moment_rotation(counter_direction).mom_y
-            / subassembly.left_beam.moment_rotation(counter_direction).rot_y
+            left_beam_mom_rot.mom_y
+            / left_beam_mom_rot.rot_y
         )
         n_beams += 1
+
     # Updates beams' stiffness factor with right beam stiffness (if present)
     if subassembly.right_beam is not None:
+        right_beam_mom_rot = subassembly.right_beam.moment_rotation(
+            direction,
+            axial=subassembly.axial
+        )
         stiffnesses['beam'] += (
-            subassembly.right_beam.moment_rotation(direction).mom_y
-            / subassembly.right_beam.moment_rotation(direction).rot_y
+            right_beam_mom_rot.mom_y
+            / right_beam_mom_rot.rot_y
         )
         n_beams += 1
 
     # Updates columns' stiffness factor with top column stiffness (if present)
     if subassembly.above_column is not None:
+        above_column_mom_rot = subassembly.above_column.moment_rotation(
+            direction,
+            axial=subassembly.axial
+        )
         stiffnesses['column'] += (
-            subassembly.above_column.moment_rotation(
-                direction,
-                axial=subassembly.axial
-                ).mom_y
-            / subassembly.above_column.moment_rotation(
-                direction,
-                axial=subassembly.axial
-                ).rot_y
+            above_column_mom_rot.mom_y
+            / above_column_mom_rot.rot_y
         )
         n_columns += 1
 
-    # Corrects the joint stifness accounting for the number of columns
+    # Corrects the joint stiffness accounting for the number of columns
     stiffnesses['joint'] = stiffnesses['joint'] * n_columns
 
     return (sum(stiff**-1 for stiff in stiffnesses.values()))**-1 * 1/n_beams
@@ -932,53 +936,60 @@ def get_low_stiffness(subassembly: Subassembly,
     if subassembly.above_column is not None:
         n_columns += 1
 
-    if subassembly.get_hierarchy()['element'] in BEAM_ELEMENTS:
+    if subassembly.get_hierarchy().weakest in BEAM_ELEMENTS:
         stiffnesses['beam'] = (
             n_beams
-            * subassembly.get_hierarchy()['beam_equivalent']
-            / subassembly.get_hierarchy()['rotation_yielding']
+            * subassembly.get_hierarchy().beam_eq
+            / subassembly.get_hierarchy().rot_y
         )
     else:
         if subassembly.left_beam is not None:
+            left_beam_mom_rot = subassembly.left_beam.moment_rotation(
+                counter_direction,
+                axial=subassembly.axial
+            )
             stiffnesses['beam'] += (
-                subassembly.left_beam.moment_rotation(counter_direction).mom_y
-                / subassembly.left_beam.moment_rotation(counter_direction).rot_y
+                left_beam_mom_rot.mom_y
+                / left_beam_mom_rot.rot_y
             )
 
         if subassembly.right_beam is not None:
+            right_beam_mom_rot = subassembly.right_beam.moment_rotation(
+                direction,
+                axial=subassembly.axial
+            )
             stiffnesses['beam'] += (
-                subassembly.right_beam.moment_rotation(direction).mom_y
-                / subassembly.right_beam.moment_rotation(direction).rot_y
+                right_beam_mom_rot.mom_y
+                / right_beam_mom_rot.rot_y
             )
 
-    if subassembly.get_hierarchy()['element'] in COLUMN_ELEMENTS:
+    if subassembly.get_hierarchy().weakest in COLUMN_ELEMENTS:
         stiffnesses['column'] = (
             n_columns
-            * subassembly.get_hierarchy()['beam_equivalent']
-            / subassembly.get_hierarchy()['rotation_yielding']
+            * subassembly.get_hierarchy().beam_eq
+            / subassembly.get_hierarchy().rot_y
         )
     else:
+        assert subassembly.below_column is not None
+        # Below column stiffness
+        below_column_mom_rot = subassembly.below_column.moment_rotation(
+            counter_direction,
+            axial=subassembly.axial
+        )
         stiffnesses['column'] += (
-            subassembly.below_column.moment_rotation(
-                counter_direction,
-                axial=subassembly.axial
-            ).mom_y
-            / subassembly.below_column.moment_rotation(
-                counter_direction,
-                axial=subassembly.axial
-            ).rot_y
+            below_column_mom_rot.mom_y
+            / below_column_mom_rot.rot_y
         )
 
         if subassembly.above_column is not None:
+            # Above column stiffness
+            above_column_mom_rot = subassembly.above_column.moment_rotation(
+                direction,
+                axial=subassembly.axial
+            )
             stiffnesses['column'] += (
-                subassembly.above_column.moment_rotation(
-                    direction,
-                    axial=subassembly.axial
-                ).mom_y
-                / subassembly.above_column.moment_rotation(
-                    direction,
-                    axial=subassembly.axial
-                ).rot_y
+                above_column_mom_rot.mom_y
+                / above_column_mom_rot.rot_y
             )
 
     stiffnesses['joint'] = stiffnesses['joint'] * n_columns
