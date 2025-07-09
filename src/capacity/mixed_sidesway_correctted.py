@@ -180,9 +180,7 @@ def mixed_sidesway_sub_stiff(
             rot_c=column_mom_rot.rot_c,
             weakest=ElementType.Column
         )
-        sub_stiffnesses[subassembly_id] = subassembly.get_stiffness(
-            direction=direction
-        )
+        sub_stiffnesses[subassembly_id] = column_mom_rot.mom_y / column_mom_rot.rot_y
 
     # Subassemblies
     for sub_id in range(frame.verticals, frame.get_node_count()):
@@ -263,13 +261,13 @@ def mixed_sidesway_sub_stiff(
         subassembly = sub_factory.get_subassembly(sub_id)
         if subassembly.left_beam is not None:
             delta_axials[sub_id] += (
-                direction * (updated_moments[sub_id - 1].updated_moment + updated_moments[sub_id])
+                direction * (updated_moments[sub_id - 1] + updated_moments[sub_id])
                 / subassembly.left_beam.get_element_lenght()
             )
 
         if subassembly.right_beam is not None:
             delta_axials[sub_id] -= (
-                direction * (updated_moments[sub_id + 1].updated_moment + updated_moments[sub_id])
+                direction * (updated_moments[sub_id + 1] + updated_moments[sub_id])
                 / subassembly.right_beam.get_element_lenght()
             )
 
@@ -288,10 +286,12 @@ def mixed_sidesway_sub_stiff(
         'name' : 'Mixed Sidesway Yielding',
         'mass' : frame.get_effective_mass(),
         'base_shear' : [
+            0,
             overturning_moment_yielding / frame.forces_effective_height,
             overturning_moment_ultimate / frame.forces_effective_height
         ],
         'disp' : [
+            0,
             new_yielding * frame.forces_effective_height,
             ultimate_frame_rotation * frame.forces_effective_height
         ]

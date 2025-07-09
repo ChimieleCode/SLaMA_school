@@ -32,7 +32,7 @@ def main(input_dct_path: Path,
     # -o-o-o-o-o- IMPORT AND VALIDATION -o-o-o-o-o-
     # Import files
     input_file_dct = import_from_json(input_dct_path)
-    damage_states_df = pd.read_csv(damaged_csv_path)
+    damage_states_df = pd.read_csv(damaged_csv_path, index_col=0)
 
     # Import frame data
     frame_dct = input_file_dct['frame']
@@ -98,12 +98,17 @@ def main(input_dct_path: Path,
 
     COMPONENT_MAP = {
         ElementType.Column: ElementFailureFEMA306.ColumnRCLapSlice,
-        ElementType.Beam: ElementFailureFEMA306.ColumnRCShear,
-        ElementType.Joint: ElementFailureFEMA306.JointRC
+        ElementType.Beam: ElementFailureFEMA306.ColumnRCLapSlice,
+        ElementType.Joint: ElementFailureFEMA306.JointRC,
+        ElementType.AboveColumn: ElementFailureFEMA306.ColumnRCLapSlice,
+        ElementType.BelowColumn: ElementFailureFEMA306.ColumnRCLapSlice,
+        ElementType.LeftBeam: ElementFailureFEMA306.ColumnRCLapSlice,
+        ElementType.RightBeam: ElementFailureFEMA306.ColumnRCLapSlice,
     }
 
     damaged_curves = {}
     for idx, row in damage_states_df.iterrows():
+        print(f'Processing scenario {idx}')
         # Create damage state map
         damage_state_map = {
             int(kk): FEMA306LambdaValues.get_lambda_values( # type: ignore[reportArgumentType]
@@ -122,9 +127,9 @@ def main(input_dct_path: Path,
 
     # -o-o-o-o-o- EXPORT RESULTS -o-o-o-o-o-
     results_dct = {
-        'damaged_curves': damaged_curves,
-        'classic_SLaMA': classic_SLaMA,
-        'stiffness_SLaMA': stiffness_SLaMA
+        'classic_SLaMA': classic_SLaMA.to_dict(),
+        'stiffness_SLaMA': stiffness_SLaMA.to_dict(),
+        'damaged_curves': [d.to_dict() for d in damaged_curves.values()]
     }
     export_to_json(
         filepath=output_curve_path,

@@ -193,10 +193,12 @@ def damaged_sidesway_sub_stiff(
         'name' : 'Damaged Mixed Sidesway',
         'mass' : frame.get_effective_mass(),
         'base_shear' : [
+            0,
             overturning_moment_yielding / frame.forces_effective_height,
             overturning_moment_ultimate / frame.forces_effective_height
         ],
         'disp' : [
+            0,
             new_yielding * frame.forces_effective_height,
             ultimate_frame_rotation * frame.forces_effective_height
         ]

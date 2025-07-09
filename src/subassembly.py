@@ -404,7 +404,18 @@ def total_hierarchy(subassembly: Subassembly,
         dict: hierarchy data
     """
     if subassembly.node_type is NodeType.Base:
-        raise NotImplementedError()
+        assert subassembly.above_column is not None
+        mom_rot = subassembly.above_column.moment_rotation(
+            direction,
+            axial=subassembly.axial,
+            consider_shear_iteraction=consider_shear_interaction
+        )
+        return SubHierarchy(
+            beam_eq=mom_rot.mom_c,
+            rot_y=mom_rot.rot_y,
+            rot_c=mom_rot.rot_c,
+            weakest=ElementType.Column
+        )
 
     counter_direction = flip_direction(direction)
 
@@ -555,7 +566,18 @@ def average_hierarchy(subassembly: Subassembly,
         dict: hierarchy data
     """
     if subassembly.node_type is NodeType.Base:
-        raise NotImplementedError()
+        assert subassembly.above_column is not None
+        mom_rot = subassembly.above_column.moment_rotation(
+            direction,
+            axial=subassembly.axial,
+            consider_shear_iteraction=consider_shear_interaction
+        )
+        return SubHierarchy(
+            beam_eq=mom_rot.mom_c,
+            rot_y=mom_rot.rot_y,
+            rot_c=mom_rot.rot_c,
+            weakest=ElementType.Column
+        )
 
     counter_direction = flip_direction(direction)
 
@@ -707,7 +729,18 @@ def single_hierarchy(subassembly: Subassembly,
         dict: hierarchy data
     """
     if subassembly.node_type is NodeType.Base:
-            raise NotImplementedError
+        assert subassembly.above_column is not None
+        mom_rot = subassembly.above_column.moment_rotation(
+            direction,
+            axial=subassembly.axial,
+            consider_shear_iteraction=consider_shear_interaction
+        )
+        return SubHierarchy(
+            beam_eq=mom_rot.mom_c,
+            rot_y=mom_rot.rot_y,
+            rot_c=mom_rot.rot_c,
+            weakest=ElementType.Column
+        )
 
     counter_direction = flip_direction(direction)
 
@@ -852,7 +885,7 @@ def get_total_stiffness(subassembly: Subassembly,
 
     joint_rotation = cfg.nodes.cracking_rotation
 
-    # Initialize the stifness data including joint value and lower column
+    # Initialize the stifness data including joint value and upper column
     assert subassembly.below_column is not None
     below_column_mom_rot = subassembly.below_column.moment_rotation(
         counter_direction,
