@@ -249,7 +249,8 @@ class Subassembly:
             consider_shear_interaction=consider_shear_interaction
         )
 
-    def get_stiffness(self,  direction: Direction = Direction.Positive) -> float:
+    def get_stiffness(self,
+                      direction: Direction = Direction.Positive) -> float:
         """
         Retuns the equivalent stiffness of the subassembly.
             The algorithm can be chosen in config file -> sub_stiffness
