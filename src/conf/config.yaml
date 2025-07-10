@@ -12,7 +12,7 @@ nodes:
   internal_node_rotation:
     yielding: 0.0075
     ultimate: 0.015
-  cracking_rotation: 0.0002
+  cracking_rotation: 0.0005
 element_settings:
   moment_curvature: 'stress_block'
   # 'stress_block' analytical formulation using stress block for concrete compression
@@ -25,6 +25,6 @@ subassembly_settings:
   # 'low' considers only the first element to break for both moment and rotations
   # 'avg' considers the combined capacity of both elements and the average of the yielding points
   # 'tot' considers the combined capacity of both elements and the lowest of the yielding points
-  sub_stiffness: 'low'
+  sub_stiffness: 'avg'
   # 'low' considers as the lowest stiffness for the critical elements
-  # 'avg' considers the correct stifness of all the elements
+  # 'avg' considers the correct stiffness of all the elements

@@ -1,8 +1,9 @@
 import math
+
 from scipy.interpolate import interp1d
 
-from src.hazard import SeismicHazard
 from model.data_models import FrameCapacity
+from src.hazard import SeismicHazard
 
 # Usefull constants
 G = 9.81
@@ -12,8 +13,8 @@ def compute_ISV(capacity: FrameCapacity, hazard: SeismicHazard) -> float:
     Compute the IS-V (analog of %NBS) for a given capacity curve and seismic demand
     """
     acc_capacity = capacity.base_shear[-1] / capacity.mass / G
-    effective_period = math.sqrt(capacity.disp[-1] / acc_capacity * 4 * math.pi**2 / G) 
-    damping = get_damping(capacity.disp[-1] / capacity.disp[0])
+    effective_period = math.sqrt(capacity.disp[-1] / acc_capacity * 4 * math.pi**2 / G)
+    damping = get_damping(capacity.disp[-1] / capacity.disp[1])
     return acc_capacity / hazard.get_spectral_acceleration(effective_period, damping)
 
 
@@ -21,8 +22,8 @@ def compute_ISD(capacity: FrameCapacity, hazard: SeismicHazard) -> float:
     """
     Compute the IS-D (analog of %NBS at damage state) for a given capacity curve and seismic demand
     """
-    acc_capacity = capacity.base_shear[0] / capacity.mass / G
-    effective_period = math.sqrt(capacity.disp[0] / acc_capacity * 4 * math.pi**2 / G) 
+    acc_capacity = capacity.base_shear[1] / capacity.mass / G
+    effective_period = math.sqrt(capacity.disp[1] / acc_capacity * 4 * math.pi**2 / G)
     return acc_capacity / hazard.get_spectral_acceleration(effective_period)
 
 

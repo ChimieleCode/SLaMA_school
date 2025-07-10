@@ -198,7 +198,8 @@ def mixed_sidesway_sub_stiff(
         if sub_id < frame.verticals:
             continue
         # Calculate new yielding
-        updated_yielding[sub_id] = sub_capacity.beam_eq/ sub_stiffnesses[sub_id]
+        updated_yielding[sub_id] = sub_capacity.beam_eq / sub_stiffnesses[sub_id]
+
 
     # Yielding of base columns
     base_yielding = min(sub_capacities[sub_id].rot_y for sub_id in range(frame.verticals))

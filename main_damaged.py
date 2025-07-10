@@ -8,7 +8,8 @@ from model.enums import Direction, ElementType
 from model.validation import (BasicSectionCollectionInput, Regular2DFrameInput,
                               SimpleMaterialInput)
 from src.capacity import mixed_sidesway, mixed_sidesway_sub_stiff
-from src.capacity.fema_306_sway import damaged_sidesway_sub_stiff
+from src.capacity.fema_306_sway import (damaged_sidesway,
+                                        damaged_sidesway_sub_stiff)
 from src.concrete import Concrete
 from src.elements.basic_element import BasicElement
 from src.frame import RegularFrameBuilder
@@ -106,7 +107,9 @@ def main(input_dct_path: Path,
         ElementType.RightBeam: ElementFailureFEMA306.ColumnRCLapSlice,
     }
 
-    damaged_curves = {}
+    damaged_curves_classic = {}
+    damaged_curves_sub_stiff = {}
+    damaged_curves_modified = {}
     for idx, row in damage_states_df.iterrows():
         print(f'Processing scenario {idx}')
         # Create damage state map
@@ -118,18 +121,34 @@ def main(input_dct_path: Path,
                 ]
             ) for kk, vv in row.items()
         }
-        damaged_curves[idx] = damaged_sidesway_sub_stiff(
+        damaged_curves_classic[idx] = damaged_sidesway(
             sub_factory=subassemly_factory,
             frame=frame,
             lambda_values=damage_state_map,
             direction=Direction.Positive,
+        )
+        damaged_curves_sub_stiff[idx] = damaged_sidesway_sub_stiff(
+            sub_factory=subassemly_factory,
+            frame=frame,
+            lambda_values=damage_state_map,
+            direction=Direction.Positive,
+            limit_yielding=False
+        )
+        damaged_curves_modified[idx] = damaged_sidesway_sub_stiff(
+            sub_factory=subassemly_factory,
+            frame=frame,
+            lambda_values=damage_state_map,
+            direction=Direction.Positive,
+            limit_yielding=True
         )
 
     # -o-o-o-o-o- EXPORT RESULTS -o-o-o-o-o-
     results_dct = {
         'classic_SLaMA': classic_SLaMA.to_dict(),
         'stiffness_SLaMA': stiffness_SLaMA.to_dict(),
-        'damaged_curves': [d.to_dict() for d in damaged_curves.values()]
+        'damaged_curves_classic': [d.to_dict() for d in damaged_curves_classic.values()],
+        'damaged_curves_sub_stiff': [d.to_dict() for d in damaged_curves_sub_stiff.values()],
+        'damaged_curves_modified': [d.to_dict() for d in damaged_curves_modified.values()]
     }
     export_to_json(
         filepath=output_curve_path,
@@ -142,8 +161,6 @@ def main(input_dct_path: Path,
             subassemly_factory,
             frame
         )
-
-
 
 
 def get_subassemby_hierarchy(sub_factory: SubassemblyFactory, frame: RegularFrame) -> dict[int, ElementType]:
@@ -235,12 +252,10 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--input', required=True, help='Path to input JSON file')
     parser.add_argument('-o', '--output', required=True, help='Output path for JSON results')
     parser.add_argument('-d', '--damaged', required=True, help='Folder for damaged CSV outputs')
-    parser.add_argument('-s', '--subassemblies', action='store_true', help='Export subassemblies to CSV')
     args = parser.parse_args()
 
     main(
         input_dct_path=Path(args.input),
         damaged_csv_path=Path(args.damaged),
-        output_curve_path=Path(args.output),
-        sub_output_path=Path(args.subassemblies) if args.subassemblies else None
+        output_curve_path=Path(args.output)
     )
