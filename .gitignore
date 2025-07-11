@@ -138,3 +138,5 @@ testfile.py
 Graphs
 OLD_Inputs
 batch_exec.py
+outputs/curves.json
+outputs/isv.csv
