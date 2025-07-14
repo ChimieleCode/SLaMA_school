@@ -1,5 +1,7 @@
 import math
+from typing import Callable
 
+import numpy as np
 from scipy.interpolate import interp1d
 
 from model.data_models import FrameCapacity
@@ -8,13 +10,13 @@ from src.hazard import SeismicHazard
 # Usefull constants
 G = 9.81
 
-def compute_ISV(capacity: FrameCapacity, hazard: SeismicHazard) -> float:
+def compute_ISV(capacity: FrameCapacity, hazard: SeismicHazard, damping_func: Callable) -> float:
     """
     Compute the IS-V (analog of %NBS) for a given capacity curve and seismic demand
     """
     acc_capacity = capacity.base_shear[-1] / capacity.mass / G
     effective_period = math.sqrt(capacity.disp[-1] / acc_capacity * 4 * math.pi**2 / G)
-    damping = get_damping(capacity.disp[-1] / capacity.disp[1])
+    damping = damping_func(capacity.disp[-1] / capacity.disp[1])
     return acc_capacity / hazard.get_spectral_acceleration(effective_period, damping)
 
 
@@ -27,7 +29,7 @@ def compute_ISD(capacity: FrameCapacity, hazard: SeismicHazard) -> float:
     return acc_capacity / hazard.get_spectral_acceleration(effective_period)
 
 
-def get_damping(ductility: float) -> float:
+def get_damping_c2(ductility: float) -> float:
     """
     Computes damping according to C2 NZSEE
     """
@@ -58,3 +60,10 @@ def get_damping(ductility: float) -> float:
         assume_sorted=True
     )
     return base_damping + 0.01 * interpolator._evaluate([ductility])[0]
+
+
+def get_damping_priestley(ductility: float) -> float:
+    """
+    Computes damping according to Priestley et al. (2007)
+    """
+    return (0.05 + 0.444*((ductility - 1) / (np.pi * ductility)))

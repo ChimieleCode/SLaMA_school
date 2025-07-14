@@ -1,9 +1,10 @@
 import math
+from functools import cache
 from typing import List
-from src.hazard.hazard_spectra import SeismicHazard
+
 from model.enums import SoilCategory, TopographicCategory
 from model.validation import NTC2018HazardInput
-from functools import cache
+from src.hazard.hazard_spectra import SeismicHazard
 
 # Usefull constants
 G = 9.81
@@ -14,7 +15,7 @@ class NTC2018SeismicHazard(SeismicHazard):
     """
     def __init__(self, haz_input: NTC2018HazardInput):
         self.__hazard_input = haz_input
-    
+
     @property
     @cache
     def Cc(self) -> float:
@@ -23,7 +24,7 @@ class NTC2018SeismicHazard(SeismicHazard):
         """
         if self.__hazard_input.soil_category == SoilCategory.SoilA:
             return 1.
-    
+
         if self.__hazard_input.soil_category == SoilCategory.SoilB:
             return 1.1 * self.__hazard_input.Tc_star**-0.2
 
@@ -32,10 +33,10 @@ class NTC2018SeismicHazard(SeismicHazard):
 
         if self.__hazard_input.soil_category == SoilCategory.SoilD:
             return 1.25 * self.__hazard_input.Tc_star**-0.5
-            
+
         if self.__hazard_input.soil_category == SoilCategory.SoilE:
             return 1.15 * self.__hazard_input.Tc_star**-0.4
-        
+
     @property
     @cache
     def Tc(self) -> float:
@@ -43,7 +44,7 @@ class NTC2018SeismicHazard(SeismicHazard):
         Returns the period corresponding to the end of the plateau
         """
         return self.Cc * self.__hazard_input.Tc_star
-    
+
     @property
     @cache
     def Tb(self) -> float:
@@ -68,7 +69,7 @@ class NTC2018SeismicHazard(SeismicHazard):
         """
         if self.__hazard_input.soil_category == SoilCategory.SoilA:
             return 1.
-    
+
         if self.__hazard_input.soil_category == SoilCategory.SoilB:
             return min(
                 1.2,
@@ -95,7 +96,7 @@ class NTC2018SeismicHazard(SeismicHazard):
                     2.4 - 1.5 * self.__hazard_input.F0 * self.__hazard_input.ag
                 )
             )
-            
+
         if self.__hazard_input.soil_category == SoilCategory.SoilE:
             return min(
                 1.6,
@@ -104,7 +105,7 @@ class NTC2018SeismicHazard(SeismicHazard):
                     2. - 1.1 * self.__hazard_input.F0 * self.__hazard_input.ag
                 )
             )
-    
+
     @property
     @cache
     def St(self) -> float:
@@ -113,25 +114,24 @@ class NTC2018SeismicHazard(SeismicHazard):
         """
         if self.__hazard_input.topographic_category == TopographicCategory.CatT1:
             return 1.
-        
+
         if self.__hazard_input.topographic_category == TopographicCategory.CatT2:
             return 1.2
-        
+
         if self.__hazard_input.topographic_category == TopographicCategory.CatT3:
             return 1.2
-        
+
         if self.__hazard_input.topographic_category == TopographicCategory.CatT4:
             return 1.4
-    
-    @cache
+
     def get_spectral_acceleration(self, period: float, damping: float = .05, scale_factor: float = 1.) -> float:
         """
         Computes the spectral acceleration
-        
+
         :params period: the period at which the spectral acceleration is evaluated
-        
+
         :params damping: the equivalent viscous damping
-        
+
         :params scale_factor: the scale factor for the spectra
         """
         eta = scale_factor * max(
@@ -140,32 +140,30 @@ class NTC2018SeismicHazard(SeismicHazard):
         )
         if 0 <= period and period < self.Tb:
             return (
-                self.__hazard_input.ag * self.Ss * self.St * eta * self.__hazard_input.F0 
+                self.__hazard_input.ag * self.Ss * self.St * eta * self.__hazard_input.F0
                 * (period/self.Tb + 1/(eta * self.__hazard_input.F0) * (1 - period/self.Tb))
             )
         if self.Tb <= period and period < self.Tc:
             return self.__hazard_input.ag * self.Ss * self.St * eta * self.__hazard_input.F0
-        
+
         if self.Tc <= period and period < self.Td:
             return self.__hazard_input.ag * self.Ss * self.St * eta * self.__hazard_input.F0 * self.Tc/period
-        
+
         if self.Td <= period:
             return self.__hazard_input.ag * self.Ss * self.St * eta * self.__hazard_input.F0 * self.Tc * self.Td/period**2
-    
-    @cache
+
     def get_spectral_displacement(self, period: float, damping: float = .05, scale_factor: float = 1.) -> float:
         """
         Computes the spectral displacement
-        
+
         :params period: the period at which the spectral acceleration is evaluated
-        
+
         :params damping: the equivalent viscous damping
-        
+
         :params scale_factor: the scale factor for the spectra
         """
         return G * period**2 / (4 * math.pi**2) * self.get_spectral_acceleration(period, damping, scale_factor)
 
-    @cache
     def periods_array(self, max_period: float = 4., npoints: int = 20) -> List[float]:
         """
         Computes a list of periods at which the spectra is going to be evaluated
@@ -180,11 +178,3 @@ class NTC2018SeismicHazard(SeismicHazard):
         periods.add(self.Tc)
         periods.add(self.Td)
         return sorted(list(periods))
-
-
-    
-
-
-
-
-    
