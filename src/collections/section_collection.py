@@ -1,10 +1,10 @@
-from typing import List
 from src.sections import Section
+
 
 class SectionCollection:
 
-    _column_sections : List[Section] = list()
-    _beam_sections : List[Section] = list()
+    _column_sections : list[Section] = list()
+    _beam_sections : list[Section] = list()
 
     def add_column_section(self, new_column: Section) -> None:
         """
@@ -18,13 +18,13 @@ class SectionCollection:
         """
         self._beam_sections.append(new_beam)
 
-    def get_beams(self) -> List[Section]:
+    def get_beams(self) -> list[Section]:
         """
         Returns the list of beam sections in the SectionCollection
         """
         return self._beam_sections
 
-    def get_columns(self) -> List[Section]:
+    def get_columns(self) -> list[Section]:
         """
         Returns the list of column sections in the SectionCollection
         """
@@ -46,6 +46,3 @@ class SectionCollection:
         for section in self._beam_sections:
             print_ += str(section)
         return print_
-
-
-

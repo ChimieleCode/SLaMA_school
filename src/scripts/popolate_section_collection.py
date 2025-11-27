@@ -1,39 +1,44 @@
-from src.concrete.concrete import Concrete
-from model.validation.section_model import BasicSectionCollectionInput
 from model.enums import SectionType
+from model.validation.section_model import BasicSectionCollectionInput
 from src.collections.section_collection import SectionCollection
+from src.concrete.concrete import Concrete
 from src.sections import Section
+from src.sections.basic_section import BasicSection, BasicSectionData
 from src.steel.steel import Steel
 
 
-def convert_to_section_collection(validated_sections: BasicSectionCollectionInput,
-                                  concrete: Concrete,
-                                  steel: Steel,
-                                  section_type: type[Section]) -> SectionCollection:
+class BasicSectionCollectionBuilder:
     """
-    This script turns a validated section collection input into a section collection
+    Builds a SectionCollection from validated input using provided concrete, steel and section class.
     """
-    sections = SectionCollection()
-    sections.reset()
 
-    for validated_section in validated_sections.beams:
-        sections.add_beam_section(
-            section_type(
-                section_data=validated_section,
-                concrete=concrete,
-                steel=steel,
-                section_type=SectionType.Beam
+    def __init__(self, concrete: Concrete, steel: Steel, section_cls: type[Section] | None = None) -> None:
+        self.concrete = concrete
+        self.steel = steel
+        self.section_cls = section_cls or BasicSection
+
+    def build(self, validated_sections: BasicSectionCollectionInput) -> SectionCollection:
+        sections = SectionCollection()
+        sections.reset()
+
+        for validated_section in validated_sections.beams:
+            sections.add_beam_section(
+                self.section_cls(
+                    section_data=BasicSectionData.from_validated_input(validated_section),
+                    concrete=self.concrete,
+                    steel=self.steel,
+                    section_type=SectionType.Beam
+                )
             )
-        )
 
-    for validated_section in validated_sections.columns:
-        sections.add_column_section(
-            section_type(
-                section_data=validated_section,
-                concrete=concrete,
-                steel=steel,
-                section_type=SectionType.Column
+        for validated_section in validated_sections.columns:
+            sections.add_column_section(
+                self.section_cls(
+                    section_data=BasicSectionData.from_validated_input(validated_section),
+                    concrete=self.concrete,
+                    steel=self.steel,
+                    section_type=SectionType.Column
+                )
             )
-        )
 
-    return sections
+        return sections

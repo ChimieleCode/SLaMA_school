@@ -16,7 +16,8 @@ from src.concrete import Concrete
 from src.elements.basic_element import BasicElement
 from src.frame import RegularFrameBuilder
 from src.frame.regular_frame import RegularFrame
-from src.scripts import convert_to_section_collection
+from src.scripts.popolate_section_collection import \
+    BasicSectionCollectionBuilder
 from src.sections.basic_section import BasicSection
 from src.steel import Steel  # does not see the package
 from src.subassembly import SubassemblyFactory
@@ -106,12 +107,12 @@ def compute_capacity_curve(
     concrete = Concrete(**validated_materials.concrete.__dict__)
 
     # Instanciate Section Data and visitors
-    sections = convert_to_section_collection(
-        validated_sections,
-        concrete,
-        steel,
-        section_type=BasicSection
+    section_collection_builder = BasicSectionCollectionBuilder(
+        concrete=concrete,
+        steel=steel,
+        section_cls=BasicSection
     )
+    sections = section_collection_builder.build(validated_sections)
 
     # Build frame model
     frame_builder = RegularFrameBuilder(

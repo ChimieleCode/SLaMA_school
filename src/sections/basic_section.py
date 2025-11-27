@@ -1,4 +1,5 @@
 import math
+from dataclasses import dataclass
 from functools import cache
 
 import numpy as np
@@ -16,10 +17,38 @@ cfg : config.MNINTConfig
 cfg = import_configuration(config.CONFIG_PATH, object_hook=config.MNINTConfig)
 
 
+@dataclass(frozen=True)
+class BasicSectionData:
+    h               : float
+    b               : float
+    As              : float
+    As1             : float
+    cover           : float
+    eq_bar_diameter : float
+    Ast             : float
+    s               : float
+    name            : str
+
+    @classmethod
+    def from_validated_input(cls, validated_input: BasicSectionInput) -> 'BasicSectionData':
+        return cls(
+            h=validated_input.h,
+            b=validated_input.b,
+            As=validated_input.As,
+            As1=validated_input.As1,
+            cover=validated_input.cover,
+            eq_bar_diameter=validated_input.eq_bar_diameter,
+            Ast=validated_input.Ast,
+            s=validated_input.s,
+            name=validated_input.name
+        )
+
+
 class BasicSection(Section):
 
+
     def __init__(self,
-                 section_data: BasicSectionInput,
+                 section_data: BasicSectionData,
                  concrete: Concrete,
                  steel: Steel,
                  section_type: SectionType) -> None:
@@ -86,17 +115,29 @@ class BasicSection(Section):
             axial=round(axial, ndigits=2)
         )
 
+    @staticmethod
     @cache
-    def plastic_hinge_length(self, L: float) -> float:
+    def _plastic_hinge_length_cached(fy: float, fu: float, eq_bar_diameter: float, L: float) -> float:
         """
-        Formulation from C5 NZSEE2017
+        Cached helper (shared across instances).
         """
         k_factor = min(
             0.08,
-            0.2*(self._steel.fu/self._steel.fy - 1)
+            0.2 * (fu / fy - 1)
         )
-        strain_penetration = 0.022 * self._steel.fy * self._section_data.eq_bar_diameter * 10**-3
-        return (k_factor * L/2 + strain_penetration)
+        strain_penetration = 0.022 * fy * eq_bar_diameter * 10**-3
+        return k_factor * L / 2 + strain_penetration
+
+    def plastic_hinge_length(self, L: float) -> float:
+        """
+        Implements the abstract method; delegates to the cached helper.
+        """
+        return self._plastic_hinge_length_cached(
+            self._steel.fy,
+            self._steel.fu,
+            self._section_data.eq_bar_diameter,
+            L
+        )
 
     def get_height(self) -> float:
         """
@@ -113,7 +154,7 @@ class BasicSection(Section):
     def get_depth(self) -> float:
         return self._section_data.h - self._section_data.cover
 
-    def get_section_data(self) -> BasicSectionInput:
+    def get_section_data(self) -> BasicSectionData:
         """
         Returns the validated input data
         """
@@ -140,7 +181,7 @@ class BasicSection(Section):
     def __str__(self) -> str:
         return f"""
         BasicSection Object
-        section id      : {self._section_data.id}
+        section id      : {self._section_data.name}
         h               : {self._section_data.h}
         b               : {self._section_data.b}
         cover           : {self._section_data.cover}
@@ -148,6 +189,8 @@ class BasicSection(Section):
         As1             : {self._section_data.As1}
         eq_bar_diameter : {self._section_data.eq_bar_diameter}
         s               : {self._section_data.s}
+        concrete        : {self._concrete.name}
+        steel           : {self._steel.name}
         """
 
 # -----------------------------------------------------
@@ -155,7 +198,7 @@ class BasicSection(Section):
 # -----------------------------------------------------
 
 @cache
-def analytic_moment_curvature(section_data: BasicSectionInput,
+def analytic_moment_curvature(section_data: BasicSectionData,
                               concrete: Concrete,
                               steel: Steel,
                               direction: Direction = Direction.Positive,
@@ -273,7 +316,7 @@ def analytic_moment_curvature(section_data: BasicSectionInput,
 # Shear Capacity Alghoritms
 # -----------------------------------------------------
 @cache
-def shear_NZSEE2017(section_data: BasicSectionInput,
+def shear_NZSEE2017(section_data: BasicSectionData,
                     concrete: Concrete,
                     steel: Steel,
                     L: float,
@@ -345,7 +388,7 @@ def shear_NZSEE2017(section_data: BasicSectionInput,
 # MN Domains Algorithms
 # -----------------------------------------------------
 @cache
-def four_points_MN_domain(section_data: BasicSectionInput,
+def four_points_MN_domain(section_data: BasicSectionData,
                           concrete: Concrete,
                           steel: Steel,
                           direction: Direction = Direction.Positive) -> MNDomain:
