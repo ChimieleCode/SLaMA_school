@@ -5,14 +5,11 @@
 
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class Concrete:
-    id          : str
+    name        : str
     fc          : float
     E           : float
     epsilon_0   : float
     epsilon_u   : float
-
-
-
-        

@@ -13,7 +13,7 @@ class FrameGrid(BaseModel):
     cross_frames: list[tuple[Regular2DFrameInput, int]]
 
 
-class MultiFrameIput(BaseModel):
+class MultiFrameInput(BaseModel):
     """
     Validator data model for multi-frame input
     """

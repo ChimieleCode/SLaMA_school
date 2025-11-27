@@ -1,14 +1,13 @@
 from functools import cache
+from math import floor
 from typing import List, Tuple
-from typing_extensions import Self
+
 import numpy as np
 
-from math import floor
-
-from model.validation import Regular2DFrameInput
-from src.frame.graph import Graph, NodeNotFoundError
-from src.collections import SectionCollection, ElementCollection
+from model.validation.frame_input import Regular2DFrameInput
+from src.collections import ElementCollection, SectionCollection
 from src.elements import Element
+from src.frame.graph import Graph, NodeNotFoundError
 
 
 class RegularFrame(Graph):
@@ -121,9 +120,9 @@ class RegularFrame(Graph):
 
         moment_column_upwind = [moment_beams_upwind[0]]
         moment_column_downwind = [moment_beams_downwind[0]]
-        for floor in range(1, self.floors):
-            moment_column_upwind.append(moment_beams_upwind[floor] - moment_column_upwind[floor - 1])
-            moment_column_downwind.append(moment_beams_upwind[floor] - moment_column_upwind[floor - 1])
+        for floor_ in range(1, self.floors):
+            moment_column_upwind.append(moment_beams_upwind[floor_] - moment_column_upwind[floor_ - 1])
+            moment_column_downwind.append(moment_beams_upwind[floor_] - moment_column_downwind[floor_ - 1])
 
         return {
             'upwind' : np.flip(
@@ -348,9 +347,9 @@ class RegularFrameBuilder:
                 self.__add_element(node, node + 1, element)
 
         # Builds elements for each floor
-        for floor, _ in enumerate(self._frame_data.H):
-            __add_storey_beams(floor)
-            __add_storey_columns(floor)
+        for floor_, _ in enumerate(self._frame_data.H):
+            __add_storey_beams(floor_)
+            __add_storey_columns(floor_)
 
 
     def __column_length(self, floor: int, vertical: int) -> dict:
@@ -450,9 +449,9 @@ def delta_axial_ratios(self: RegularFrame) -> dict:
 
     moment_column_upwind = [moment_beams_upwind[0]]
     moment_column_downwind = [moment_beams_downwind[0]]
-    for floor in range(1, self.floors):
-        moment_column_upwind.append(moment_beams_upwind[floor] - moment_column_upwind[floor - 1])
-        moment_column_downwind.append(moment_beams_upwind[floor] - moment_column_upwind[floor - 1])
+    for floor_ in range(1, self.floors):
+        moment_column_upwind.append(moment_beams_upwind[floor_] - moment_column_upwind[floor_ - 1])
+        moment_column_downwind.append(moment_beams_upwind[floor_] - moment_column_upwind[floor_ - 1])
     print(len(moment_beams_upwind))
     return {
         'upwind' : np.flip(
@@ -468,4 +467,3 @@ def delta_axial_ratios(self: RegularFrame) -> dict:
             ],
         ),
     }
-

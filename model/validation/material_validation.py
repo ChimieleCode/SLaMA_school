@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 
+
 class SimpleConcreteInput(BaseModel):
     """
     Data validator model of concrete with minimal parameters
     """
-    id          : str
+    name        : str
     fc          : float
     E           : float
     epsilon_0   : float
@@ -18,7 +19,7 @@ class SimpleSteelInput(BaseModel):
     """
     Data validator model of steel with minimal parameters
     """
-    id          : str
+    name        : str
     fy          : float
     fu          : float
     E           : float

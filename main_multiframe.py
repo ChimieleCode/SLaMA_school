@@ -7,8 +7,10 @@ from typing import Callable
 
 from model.data_models import FrameCapacity
 from model.enums import Direction, ElementType
-from model.validation import (BasicSectionCollectionInput, MultiFrameIput,
-                              Regular2DFrameInput, SimpleMaterialInput)
+from model.validation.frame_input import Regular2DFrameInput
+from model.validation.input_validation import MultiFrameInput
+from model.validation.material_validation import SimpleMaterialInput
+from model.validation.section_model import BasicSectionCollectionInput
 from src.capacity import beam_sidesway, column_sidesway, mixed_sidesway
 from src.concrete import Concrete
 from src.elements.basic_element import BasicElement
@@ -34,7 +36,7 @@ def main(
 
     # Import files
     input_file_dct = import_from_json(input_path)
-    validated_input = MultiFrameIput(
+    validated_input = MultiFrameInput(
         **input_file_dct
     )
 

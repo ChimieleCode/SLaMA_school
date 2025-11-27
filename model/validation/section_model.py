@@ -15,7 +15,7 @@ class BasicSectionInput(BaseModel):
     eq_bar_diameter : float
     Ast             : float
     s               : float
-    id              : str
+    name            : str
 
     class Config:
         frozen = True
@@ -26,10 +26,10 @@ class BasicSectionCollectionInput(BaseModel):
     beams   : List[BasicSectionInput]
 
     @field_validator('columns', 'beams')
-    def section_id_no_duplicates(cls, value):
-        section_id_set = set()
+    def section_name_no_duplicates(cls, value):
+        section_name_set = set()
         for section in value:
-            section_id_set.add(section.id)
-        if len(section_id_set) != len(value):
-            raise ValueError('different sections have the same id, the section id must be unique')
+            section_name_set.add(section.name)
+        if len(section_name_set) != len(value):
+            raise ValueError('different sections have the same name, the section name must be unique')
         return value
