@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import List
 from dataclasses import dataclass
 
 from model.enums import Direction, SectionType
-from src.steel.steel import Steel
 from src.concrete.concrete import Concrete
+from src.steel.steel import Steel
 
 
 @dataclass
@@ -25,8 +24,8 @@ class ShearEnvelope:
 
 @dataclass
 class MNDomain:
-    moment: List[float]
-    axial: List[float]
+    moment: list[float]
+    axial: list[float]
 
 
 class Section(ABC):
@@ -34,7 +33,7 @@ class Section(ABC):
     Abstract class for section
     """
     @abstractmethod
-    def moment_curvature(self, direction: Direction, axial: float=0.) -> MomentCurvature:
+    def moment_curvature(self, direction: Direction, axial: float = 0.) -> MomentCurvature:
         pass
 
     @abstractmethod

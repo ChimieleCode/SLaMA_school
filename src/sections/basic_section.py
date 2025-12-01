@@ -46,7 +46,6 @@ class BasicSectionData:
 
 class BasicSection(Section):
 
-
     def __init__(self,
                  section_data: BasicSectionData,
                  concrete: Concrete,

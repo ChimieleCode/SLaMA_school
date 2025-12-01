@@ -3,20 +3,21 @@ from src.sections import Section
 
 class SectionCollection:
 
-    _column_sections : list[Section] = list()
-    _beam_sections : list[Section] = list()
+    def __init__(self) -> None:
+        self._column_sections : list[Section] = list()
+        self._beam_sections : list[Section] = list()
 
-    def add_column_section(self, new_column: Section) -> None:
+    def add_column(self, section: Section) -> None:
         """
         Adds a Section to the column section collection
         """
-        self._column_sections.append(new_column)
+        self._column_sections.append(section)
 
-    def add_beam_section(self, new_beam: Section) -> None:
+    def add_beam(self, section: Section) -> None:
         """
         Adds a Section to the beam section collection
         """
-        self._beam_sections.append(new_beam)
+        self._beam_sections.append(section)
 
     def get_beams(self) -> list[Section]:
         """
@@ -30,7 +31,7 @@ class SectionCollection:
         """
         return self._column_sections
 
-    def reset(self, beams: bool=True, columns: bool=True) -> None:
+    def reset(self, beams: bool = True, columns: bool = True) -> None:
         """
         Resets the section collection
         """

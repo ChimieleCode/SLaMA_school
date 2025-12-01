@@ -22,7 +22,7 @@ class BasicSectionCollectionBuilder:
         sections.reset()
 
         for validated_section in validated_sections.beams:
-            sections.add_beam_section(
+            sections.add_beam(
                 self.section_cls(
                     section_data=BasicSectionData.from_validated_input(validated_section),
                     concrete=self.concrete,
@@ -32,7 +32,7 @@ class BasicSectionCollectionBuilder:
             )
 
         for validated_section in validated_sections.columns:
-            sections.add_column_section(
+            sections.add_column(
                 self.section_cls(
                     section_data=BasicSectionData.from_validated_input(validated_section),
                     concrete=self.concrete,
