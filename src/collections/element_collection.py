@@ -1,16 +1,17 @@
-from typing import List
+from functools import cache
 
 from src.elements import Element
 from src.sections import Section
-from functools import cache
+
 
 class ElementCollection:
 
-    _column_elements : List[Element] = list()
-    _beam_elements : List[Element] = list()
+    def __init__(self) -> None:
+        self._column_elements : list[Element] = list()
+        self._beam_elements : list[Element] = list()
 
     @cache
-    def add_column_element(self, section: Section, L: float, _elementClass: type[Element]) -> Element:
+    def add_column(self, section: Section, L: float, _elementClass: type[Element]) -> Element:
         """Adds an element to the column element collection starting from a Section
 
         If an istance with same data is already contained in the collection,
@@ -32,7 +33,7 @@ class ElementCollection:
         return new_column
 
     @cache
-    def add_beam_element(self, section: Section, L: float, _elementClass: type[Element]) -> Element:
+    def add_beam(self, section: Section, L: float, _elementClass: type[Element]) -> Element:
         """Adds an element to the beam element collection starting from a Section
 
         If an istance with same data is already contained in the collection,
@@ -53,13 +54,13 @@ class ElementCollection:
         self._beam_elements.append(new_beam)
         return new_beam
 
-    def get_beams(self) -> List[Element]:
+    def get_beams(self) -> list[Element]:
         """
         Returns the list of beam elements in the SectionCollection
         """
         return self._beam_elements
 
-    def get_columns(self) -> List[Element]:
+    def get_columns(self) -> list[Element]:
         """
         Returns the list of column elements in the SectionCollection
         """
@@ -81,6 +82,3 @@ class ElementCollection:
         for element in self._beam_elements:
             print_ += str(element)
         return print_
-
-
-

@@ -1,6 +1,5 @@
 from functools import cache
 from math import floor
-from typing import List, Tuple
 
 import numpy as np
 
@@ -12,11 +11,12 @@ from src.frame.graph import Graph, NodeNotFoundError
 
 class RegularFrame(Graph):
 
-    def __init__(self, node_count: int,
-                 lengths: List[float],
-                 heights: List[float],
-                 masses: List[float],
-                 loads: List[float]):
+    def __init__(self,
+                 node_count: int,
+                 lengths: list[float],
+                 heights: list[float],
+                 masses: list[float],
+                 loads: list[float]):
         """
         Defines a frame data structure as a graph
 
@@ -53,7 +53,7 @@ class RegularFrame(Graph):
 
     @property
     @cache
-    def floor_forces_distribution(self) -> List[float]:
+    def floor_forces_distribution(self) -> list[float]:
         """
         Returns the force distribution according to NTC 2018
         """
@@ -165,7 +165,7 @@ class RegularFrame(Graph):
             raise NodeNotFoundError('Given node does not exist')
         return node % self.verticals
 
-    def get_node_position(self, node: int) -> Tuple[int, int]:
+    def get_node_position(self, node: int) -> tuple[int, int]:
         """
         Returns the node location [vertical, floor] given the id
         """
@@ -173,7 +173,7 @@ class RegularFrame(Graph):
             raise NodeNotFoundError('Given node does not exist')
         return self.get_node_vertical(node), self.get_node_floor(node)
 
-    def get_node_coordinates(self, node: int) -> Tuple[float, float]:
+    def get_node_coordinates(self, node: int) -> tuple[float, float]:
         """
         Returns the node coordinates X, Y given the id
         """
@@ -250,13 +250,13 @@ class RegularFrame(Graph):
             raise NodeNotFoundError('Specified span does not exist')
         return self._heights[floor - 1]
 
-    def get_heights(self) -> List[float]:
+    def get_heights(self) -> list[float]:
         """
         Returns the heights of every floor
         """
         return self._heights
 
-    def get_lengths(self) -> List[float]:
+    def get_lengths(self) -> list[float]:
         """
         Returns the heights of every floor
         """
@@ -288,14 +288,15 @@ class RegularFrameBuilder:
     def __init__(self,
                  frame_data: Regular2DFrameInput,
                  sections: SectionCollection,
-                 element_object: type[Element]) -> None:
+                 element_object: type[Element],
+                 element_collection: ElementCollection | None = None) -> None:
         """
         This is class builds a frame given the sections and the validated frame input
         """
         self._frame_data = frame_data
         self._sections = sections
         self._element_object = element_object
-        self._elements = ElementCollection()
+        self._elements = element_collection or ElementCollection()
         self._frame = RegularFrame(len(frame_data.loads),
                                     lengths=frame_data.L,
                                     heights=frame_data.H,
